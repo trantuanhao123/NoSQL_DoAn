@@ -1,49 +1,18 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- */
-
 package com.mycompany.doannosql;
 
-import java.net.InetSocketAddress;
-import com.datastax.oss.driver.api.core.CqlSession;
-import com.datastax.oss.driver.api.core.cql.ResultSet;
-import com.datastax.oss.driver.api.core.cql.Row;
-/**
- *
- * @author HAO
- */
+import KetNoiCSDL.KetNoiCSDL;
 
 public class DoAnNoSQL {
-
     public static void main(String[] args) {
-        int connected = 0; // 0 = false, 1 = true
+        KetNoiCSDL ketNoi = new KetNoiCSDL("127.0.0.1", 9042, "datacenter1", "cassandra", "cassandra");
 
-        try (CqlSession session = CqlSession.builder()
-                .addContactPoint(new InetSocketAddress("127.0.0.1", 9042))
-                .withLocalDatacenter("datacenter1")
-                .withAuthCredentials("cassandra", "cassandra")
-                .withKeyspace("buoi04")
-                .build()) {
+        System.out.println("Ket Noi Thanh Cong: " + (ketNoi.isConnected() ? 1 : 0));
 
-            connected = 1;
-
-            // Query bảng hotels
-            ResultSet rs = session.execute("SELECT * FROM hotels");
-            System.out.println("Dữ liệu bảng hotels:");
-            for (Row row : rs) {
-                System.out.println(
-                        "hotel_id=" + row.getString("hotel_id") +
-                        ", name=" + row.getString("name") +
-                        ", address=" + row.getString("address") +
-                        ", phone=" + row.getString("phone")
-                );
-            }
-
-        } catch (Exception e) {
-            connected = 0;
-            e.printStackTrace();
+        // Nếu kết nối thành công thì có thể dùng session để query
+        if (ketNoi.isConnected()) {
+            // ví dụ: ketNoi.getSession().execute("SELECT * FROM system.local");
         }
 
-        System.out.println("Kết nối Cassandra thành công? " + connected);
+        ketNoi.close();
     }
 }
