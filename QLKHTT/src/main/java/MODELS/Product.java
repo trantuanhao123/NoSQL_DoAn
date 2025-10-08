@@ -8,7 +8,7 @@ import com.datastax.oss.driver.api.mapper.annotations.CqlName;
 import com.datastax.oss.driver.api.mapper.annotations.Entity;
 import com.datastax.oss.driver.api.mapper.annotations.PartitionKey;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;  
 
 /**
  *
@@ -46,12 +46,12 @@ public class Product {
     private String image;
 
     @CqlName("created_at")
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     // Constructors
     public Product() {}
 
-    public Product(String productId, String brand, String model, String cpu, int ram, String storage, BigDecimal price, boolean available, String image, LocalDateTime createdAt) {
+    public Product(String productId, String brand, String model, String cpu, int ram, String storage, BigDecimal price, boolean available, String image, Instant createdAt) {
         this.productId = productId;
         this.brand = brand;
         this.model = model;
@@ -83,6 +83,6 @@ public class Product {
     public void setAvailable(boolean available) { this.available = available; }
     public String getImage() { return image; }
     public void setImage(String image) { this.image = image; }
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public Instant getCreatedAt() { return createdAt; } 
+    public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
 }

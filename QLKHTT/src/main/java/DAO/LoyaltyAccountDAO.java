@@ -9,6 +9,7 @@ import com.datastax.oss.driver.api.core.PagingIterable;
 import com.datastax.oss.driver.api.mapper.annotations.Dao;
 import com.datastax.oss.driver.api.mapper.annotations.Insert;
 import com.datastax.oss.driver.api.mapper.annotations.Select;
+import com.datastax.oss.driver.api.mapper.annotations.Update;
 import java.util.UUID;
 
 /**
@@ -20,6 +21,9 @@ import java.util.UUID;
 public interface LoyaltyAccountDAO {
     @Insert
     void save(LoyaltyAccount loyaltyAccount);
+    
+    @Update // Bổ sung Update
+    void update(LoyaltyAccount loyaltyAccount);
 
     @Select
     LoyaltyAccount findById(UUID customerId);

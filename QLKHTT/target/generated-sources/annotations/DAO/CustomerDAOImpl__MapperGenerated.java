@@ -44,13 +44,15 @@ public class CustomerDAOImpl__MapperGenerated extends DaoBase implements Custome
 
   private final PreparedStatement findAllStatement;
 
+  private final PreparedStatement findAllWithFilteringStatement;
+
   private final PreparedStatement deleteStatement;
 
   private CustomerDAOImpl__MapperGenerated(MapperContext context,
       CustomerHelper__MapperGenerated customerHelper, PreparedStatement saveStatement,
       PreparedStatement findByIdStatement, PreparedStatement findByEmailStatement,
       PreparedStatement findByPhoneStatement, PreparedStatement findAllStatement,
-      PreparedStatement deleteStatement) {
+      PreparedStatement findAllWithFilteringStatement, PreparedStatement deleteStatement) {
     super(context);
     this.customerHelper = customerHelper;
     this.saveStatement = saveStatement;
@@ -58,6 +60,7 @@ public class CustomerDAOImpl__MapperGenerated extends DaoBase implements Custome
     this.findByEmailStatement = findByEmailStatement;
     this.findByPhoneStatement = findByPhoneStatement;
     this.findAllStatement = findAllStatement;
+    this.findAllWithFilteringStatement = findAllWithFilteringStatement;
     this.deleteStatement = deleteStatement;
   }
 
@@ -96,6 +99,13 @@ public class CustomerDAOImpl__MapperGenerated extends DaoBase implements Custome
   @Override
   public PagingIterable<Customer> findAll() {
     BoundStatementBuilder boundStatementBuilder = findAllStatement.boundStatementBuilder();
+    BoundStatement boundStatement = boundStatementBuilder.build();
+    return executeAndMapToEntityIterable(boundStatement, customerHelper);
+  }
+
+  @Override
+  public PagingIterable<Customer> findAllWithFiltering() {
+    BoundStatementBuilder boundStatementBuilder = findAllWithFilteringStatement.boundStatementBuilder();
     BoundStatement boundStatement = boundStatementBuilder.build();
     return executeAndMapToEntityIterable(boundStatement, customerHelper);
   }
@@ -156,6 +166,13 @@ public class CustomerDAOImpl__MapperGenerated extends DaoBase implements Custome
           findAllStatement_simple.getQuery());
       CompletionStage<PreparedStatement> findAllStatement = prepare(findAllStatement_simple, context);
       prepareStages.add(findAllStatement);
+      // Prepare the statement for `findAllWithFiltering()`:
+      SimpleStatement findAllWithFilteringStatement_simple = customerHelper.selectByPrimaryKeyParts(0).build();
+      LOG.debug("[{}] Preparing query `{}` for method findAllWithFiltering()",
+          context.getSession().getName(),
+          findAllWithFilteringStatement_simple.getQuery());
+      CompletionStage<PreparedStatement> findAllWithFilteringStatement = prepare(findAllWithFilteringStatement_simple, context);
+      prepareStages.add(findAllWithFilteringStatement);
       // Prepare the statement for `delete(MODELS.Customer)`:
       SimpleStatement deleteStatement_simple = customerHelper.deleteByPrimaryKeyParts(1).build();
       LOG.debug("[{}] Preparing query `{}` for method delete(MODELS.Customer)",
@@ -173,6 +190,7 @@ public class CustomerDAOImpl__MapperGenerated extends DaoBase implements Custome
               CompletableFutures.getCompleted(findByEmailStatement),
               CompletableFutures.getCompleted(findByPhoneStatement),
               CompletableFutures.getCompleted(findAllStatement),
+              CompletableFutures.getCompleted(findAllWithFilteringStatement),
               CompletableFutures.getCompleted(deleteStatement)))
           .toCompletableFuture();
     } catch (Throwable t) {

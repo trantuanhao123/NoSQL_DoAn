@@ -12,6 +12,7 @@ import com.datastax.oss.driver.api.mapper.entity.saving.NullSavingStrategy;
 import com.datastax.oss.driver.internal.core.util.concurrent.BlockingOperation;
 import com.datastax.oss.driver.internal.core.util.concurrent.CompletableFutures;
 import com.datastax.oss.driver.internal.mapper.DaoBase;
+import com.datastax.oss.driver.internal.querybuilder.update.DefaultUpdate;
 import java.lang.Boolean;
 import java.lang.Override;
 import java.lang.String;
@@ -35,7 +36,13 @@ public class ProductDAOImpl__MapperGenerated extends DaoBase implements ProductD
 
   private final PreparedStatement saveStatement;
 
+  private final PreparedStatement updateStatement;
+
+  private final PreparedStatement deleteStatement;
+
   private final PreparedStatement findByIdStatement;
+
+  private final PreparedStatement findAllStatement;
 
   private final PreparedStatement findByBrandStatement;
 
@@ -43,12 +50,16 @@ public class ProductDAOImpl__MapperGenerated extends DaoBase implements ProductD
 
   private ProductDAOImpl__MapperGenerated(MapperContext context,
       ProductHelper__MapperGenerated productHelper, PreparedStatement saveStatement,
-      PreparedStatement findByIdStatement, PreparedStatement findByBrandStatement,
-      PreparedStatement findByAvailableStatement) {
+      PreparedStatement updateStatement, PreparedStatement deleteStatement,
+      PreparedStatement findByIdStatement, PreparedStatement findAllStatement,
+      PreparedStatement findByBrandStatement, PreparedStatement findByAvailableStatement) {
     super(context);
     this.productHelper = productHelper;
     this.saveStatement = saveStatement;
+    this.updateStatement = updateStatement;
+    this.deleteStatement = deleteStatement;
     this.findByIdStatement = findByIdStatement;
+    this.findAllStatement = findAllStatement;
     this.findByBrandStatement = findByBrandStatement;
     this.findByAvailableStatement = findByAvailableStatement;
   }
@@ -62,11 +73,34 @@ public class ProductDAOImpl__MapperGenerated extends DaoBase implements ProductD
   }
 
   @Override
+  public void update(Product product) {
+    BoundStatementBuilder boundStatementBuilder = updateStatement.boundStatementBuilder();
+    productHelper.set(product, boundStatementBuilder, NullSavingStrategy.DO_NOT_SET, false);
+    BoundStatement boundStatement = boundStatementBuilder.build();
+    execute(boundStatement);
+  }
+
+  @Override
+  public void delete(Product product) {
+    BoundStatementBuilder boundStatementBuilder = deleteStatement.boundStatementBuilder();
+    boundStatementBuilder = boundStatementBuilder.set("product_id", product.getProductId(), String.class);
+    BoundStatement boundStatement = boundStatementBuilder.build();
+    execute(boundStatement);
+  }
+
+  @Override
   public Product findById(String productId) {
     BoundStatementBuilder boundStatementBuilder = findByIdStatement.boundStatementBuilder();
     boundStatementBuilder = boundStatementBuilder.set("product_id", productId, String.class);
     BoundStatement boundStatement = boundStatementBuilder.build();
     return executeAndMapToSingleEntity(boundStatement, productHelper);
+  }
+
+  @Override
+  public PagingIterable<Product> findAll() {
+    BoundStatementBuilder boundStatementBuilder = findAllStatement.boundStatementBuilder();
+    BoundStatement boundStatement = boundStatementBuilder.build();
+    return executeAndMapToEntityIterable(boundStatement, productHelper);
   }
 
   @Override
@@ -105,6 +139,20 @@ public class ProductDAOImpl__MapperGenerated extends DaoBase implements ProductD
           saveStatement_simple.getQuery());
       CompletionStage<PreparedStatement> saveStatement = prepare(saveStatement_simple, context);
       prepareStages.add(saveStatement);
+      // Prepare the statement for `update(MODELS.Product)`:
+      SimpleStatement updateStatement_simple = SimpleStatement.newInstance(((DefaultUpdate)productHelper.updateByPrimaryKey()).asCql());
+      LOG.debug("[{}] Preparing query `{}` for method update(MODELS.Product)",
+          context.getSession().getName(),
+          updateStatement_simple.getQuery());
+      CompletionStage<PreparedStatement> updateStatement = prepare(updateStatement_simple, context);
+      prepareStages.add(updateStatement);
+      // Prepare the statement for `delete(MODELS.Product)`:
+      SimpleStatement deleteStatement_simple = productHelper.deleteByPrimaryKeyParts(1).build();
+      LOG.debug("[{}] Preparing query `{}` for method delete(MODELS.Product)",
+          context.getSession().getName(),
+          deleteStatement_simple.getQuery());
+      CompletionStage<PreparedStatement> deleteStatement = prepare(deleteStatement_simple, context);
+      prepareStages.add(deleteStatement);
       // Prepare the statement for `findById(java.lang.String)`:
       SimpleStatement findByIdStatement_simple = productHelper.selectByPrimaryKeyParts(1).build();
       LOG.debug("[{}] Preparing query `{}` for method findById(java.lang.String)",
@@ -112,6 +160,13 @@ public class ProductDAOImpl__MapperGenerated extends DaoBase implements ProductD
           findByIdStatement_simple.getQuery());
       CompletionStage<PreparedStatement> findByIdStatement = prepare(findByIdStatement_simple, context);
       prepareStages.add(findByIdStatement);
+      // Prepare the statement for `findAll()`:
+      SimpleStatement findAllStatement_simple = productHelper.selectByPrimaryKeyParts(0).build();
+      LOG.debug("[{}] Preparing query `{}` for method findAll()",
+          context.getSession().getName(),
+          findAllStatement_simple.getQuery());
+      CompletionStage<PreparedStatement> findAllStatement = prepare(findAllStatement_simple, context);
+      prepareStages.add(findAllStatement);
       // Prepare the statement for `findByBrand(java.lang.String)`:
       SimpleStatement findByBrandStatement_simple = productHelper.selectStart().whereRaw("brand = :brand").build();
       LOG.debug("[{}] Preparing query `{}` for method findByBrand(java.lang.String)",
@@ -132,7 +187,10 @@ public class ProductDAOImpl__MapperGenerated extends DaoBase implements ProductD
           .thenApply(v -> (ProductDAO) new ProductDAOImpl__MapperGenerated(context,
               productHelper,
               CompletableFutures.getCompleted(saveStatement),
+              CompletableFutures.getCompleted(updateStatement),
+              CompletableFutures.getCompleted(deleteStatement),
               CompletableFutures.getCompleted(findByIdStatement),
+              CompletableFutures.getCompleted(findAllStatement),
               CompletableFutures.getCompleted(findByBrandStatement),
               CompletableFutures.getCompleted(findByAvailableStatement)))
           .toCompletableFuture();

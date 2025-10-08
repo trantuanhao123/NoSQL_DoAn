@@ -9,7 +9,7 @@ import com.datastax.oss.driver.api.mapper.annotations.CqlName;
 import com.datastax.oss.driver.api.mapper.annotations.Entity;
 import com.datastax.oss.driver.api.mapper.annotations.PartitionKey;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -30,7 +30,7 @@ public class OrderByCustomer {
 
     @ClusteringColumn(0)
     @CqlName("order_date")
-    private LocalDateTime orderDate;
+    private Instant orderDate;
 
     @ClusteringColumn(1)
     @CqlName("order_id")
@@ -48,7 +48,7 @@ public class OrderByCustomer {
     // Constructors
     public OrderByCustomer() {}
 
-    public OrderByCustomer(UUID customerId, String yearMonth, LocalDateTime orderDate, UUID orderId, BigDecimal total, List<OrderItem> items, String status) {
+    public OrderByCustomer(UUID customerId, String yearMonth, Instant orderDate, UUID orderId, BigDecimal total, List<OrderItem> items, String status) {
         this.customerId = customerId;
         this.yearMonth = yearMonth;
         this.orderDate = orderDate;
@@ -63,8 +63,8 @@ public class OrderByCustomer {
     public void setCustomerId(UUID customerId) { this.customerId = customerId; }
     public String getYearMonth() { return yearMonth; }
     public void setYearMonth(String yearMonth) { this.yearMonth = yearMonth; }
-    public LocalDateTime getOrderDate() { return orderDate; }
-    public void setOrderDate(LocalDateTime orderDate) { this.orderDate = orderDate; }
+    public Instant getOrderDate() { return orderDate; }
+    public void setOrderDate(Instant orderDate) { this.orderDate = orderDate; }
     public UUID getOrderId() { return orderId; }
     public void setOrderId(UUID orderId) { this.orderId = orderId; }
     public BigDecimal getTotal() { return total; }

@@ -32,7 +32,7 @@ import java.lang.Override;
 import java.lang.String;
 import java.lang.SuppressWarnings;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -53,7 +53,7 @@ public class OrderByCustomerHelper__MapperGenerated extends EntityHelperBase<Ord
 
   private static final GenericType<String> GENERIC_TYPE1 = new GenericType<String>(){};
 
-  private static final GenericType<LocalDateTime> GENERIC_TYPE2 = new GenericType<LocalDateTime>(){};
+  private static final GenericType<Instant> GENERIC_TYPE2 = new GenericType<Instant>(){};
 
   private static final GenericType<BigDecimal> GENERIC_TYPE3 = new GenericType<BigDecimal>(){};
 
@@ -98,7 +98,7 @@ public class OrderByCustomerHelper__MapperGenerated extends EntityHelperBase<Ord
     }
     if (!lenient || hasProperty(target, "order_date")) {
       if (entity.getOrderDate() != null || nullSavingStrategy == NullSavingStrategy.SET_TO_NULL) {
-        target = target.set("order_date", entity.getOrderDate(), LocalDateTime.class);
+        target = target.set("order_date", entity.getOrderDate(), Instant.class);
       }
     }
     if (!lenient || hasProperty(target, "order_id")) {
@@ -146,7 +146,7 @@ public class OrderByCustomerHelper__MapperGenerated extends EntityHelperBase<Ord
       returnValue.setYearMonth(propertyValue1);
     }
     if (!lenient || hasProperty(source, "order_date")) {
-      LocalDateTime propertyValue2 = source.get("order_date", LocalDateTime.class);
+      Instant propertyValue2 = source.get("order_date", Instant.class);
       returnValue.setOrderDate(propertyValue2);
     }
     if (!lenient || hasProperty(source, "order_id")) {

@@ -12,6 +12,7 @@ import com.datastax.oss.driver.api.mapper.entity.saving.NullSavingStrategy;
 import com.datastax.oss.driver.internal.core.util.concurrent.BlockingOperation;
 import com.datastax.oss.driver.internal.core.util.concurrent.CompletableFutures;
 import com.datastax.oss.driver.internal.mapper.DaoBase;
+import com.datastax.oss.driver.internal.querybuilder.update.DefaultUpdate;
 import java.lang.Boolean;
 import java.lang.Override;
 import java.lang.String;
@@ -36,16 +37,20 @@ public class LoyaltyAccountDAOImpl__MapperGenerated extends DaoBase implements L
 
   private final PreparedStatement saveStatement;
 
+  private final PreparedStatement updateStatement;
+
   private final PreparedStatement findByIdStatement;
 
   private final PreparedStatement findByTierStatement;
 
   private LoyaltyAccountDAOImpl__MapperGenerated(MapperContext context,
       LoyaltyAccountHelper__MapperGenerated loyaltyAccountHelper, PreparedStatement saveStatement,
-      PreparedStatement findByIdStatement, PreparedStatement findByTierStatement) {
+      PreparedStatement updateStatement, PreparedStatement findByIdStatement,
+      PreparedStatement findByTierStatement) {
     super(context);
     this.loyaltyAccountHelper = loyaltyAccountHelper;
     this.saveStatement = saveStatement;
+    this.updateStatement = updateStatement;
     this.findByIdStatement = findByIdStatement;
     this.findByTierStatement = findByTierStatement;
   }
@@ -53,6 +58,14 @@ public class LoyaltyAccountDAOImpl__MapperGenerated extends DaoBase implements L
   @Override
   public void save(LoyaltyAccount loyaltyAccount) {
     BoundStatementBuilder boundStatementBuilder = saveStatement.boundStatementBuilder();
+    loyaltyAccountHelper.set(loyaltyAccount, boundStatementBuilder, NullSavingStrategy.DO_NOT_SET, false);
+    BoundStatement boundStatement = boundStatementBuilder.build();
+    execute(boundStatement);
+  }
+
+  @Override
+  public void update(LoyaltyAccount loyaltyAccount) {
+    BoundStatementBuilder boundStatementBuilder = updateStatement.boundStatementBuilder();
     loyaltyAccountHelper.set(loyaltyAccount, boundStatementBuilder, NullSavingStrategy.DO_NOT_SET, false);
     BoundStatement boundStatement = boundStatementBuilder.build();
     execute(boundStatement);
@@ -94,6 +107,13 @@ public class LoyaltyAccountDAOImpl__MapperGenerated extends DaoBase implements L
           saveStatement_simple.getQuery());
       CompletionStage<PreparedStatement> saveStatement = prepare(saveStatement_simple, context);
       prepareStages.add(saveStatement);
+      // Prepare the statement for `update(MODELS.LoyaltyAccount)`:
+      SimpleStatement updateStatement_simple = SimpleStatement.newInstance(((DefaultUpdate)loyaltyAccountHelper.updateByPrimaryKey()).asCql());
+      LOG.debug("[{}] Preparing query `{}` for method update(MODELS.LoyaltyAccount)",
+          context.getSession().getName(),
+          updateStatement_simple.getQuery());
+      CompletionStage<PreparedStatement> updateStatement = prepare(updateStatement_simple, context);
+      prepareStages.add(updateStatement);
       // Prepare the statement for `findById(java.util.UUID)`:
       SimpleStatement findByIdStatement_simple = loyaltyAccountHelper.selectByPrimaryKeyParts(1).build();
       LOG.debug("[{}] Preparing query `{}` for method findById(java.util.UUID)",
@@ -114,6 +134,7 @@ public class LoyaltyAccountDAOImpl__MapperGenerated extends DaoBase implements L
           .thenApply(v -> (LoyaltyAccountDAO) new LoyaltyAccountDAOImpl__MapperGenerated(context,
               loyaltyAccountHelper,
               CompletableFutures.getCompleted(saveStatement),
+              CompletableFutures.getCompleted(updateStatement),
               CompletableFutures.getCompleted(findByIdStatement),
               CompletableFutures.getCompleted(findByTierStatement)))
           .toCompletableFuture();

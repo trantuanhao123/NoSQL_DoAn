@@ -31,7 +31,7 @@ import java.lang.Override;
 import java.lang.String;
 import java.lang.SuppressWarnings;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -55,7 +55,7 @@ public class ProductHelper__MapperGenerated extends EntityHelperBase<Product> {
 
   private static final GenericType<Boolean> GENERIC_TYPE3 = new GenericType<Boolean>(){};
 
-  private static final GenericType<LocalDateTime> GENERIC_TYPE4 = new GenericType<LocalDateTime>(){};
+  private static final GenericType<Instant> GENERIC_TYPE4 = new GenericType<Instant>(){};
 
   private final List<String> primaryKeys;
 
@@ -121,7 +121,7 @@ public class ProductHelper__MapperGenerated extends EntityHelperBase<Product> {
     }
     if (!lenient || hasProperty(target, "created_at")) {
       if (entity.getCreatedAt() != null || nullSavingStrategy == NullSavingStrategy.SET_TO_NULL) {
-        target = target.set("created_at", entity.getCreatedAt(), LocalDateTime.class);
+        target = target.set("created_at", entity.getCreatedAt(), Instant.class);
       }
     }
     return target;
@@ -167,7 +167,7 @@ public class ProductHelper__MapperGenerated extends EntityHelperBase<Product> {
       returnValue.setImage(propertyValue8);
     }
     if (!lenient || hasProperty(source, "created_at")) {
-      LocalDateTime propertyValue9 = source.get("created_at", LocalDateTime.class);
+      Instant propertyValue9 = source.get("created_at", Instant.class);
       returnValue.setCreatedAt(propertyValue9);
     }
     return returnValue;

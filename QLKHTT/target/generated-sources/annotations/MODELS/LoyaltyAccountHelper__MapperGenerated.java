@@ -31,7 +31,7 @@ import java.lang.Override;
 import java.lang.String;
 import java.lang.SuppressWarnings;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -50,7 +50,7 @@ public class LoyaltyAccountHelper__MapperGenerated extends EntityHelperBase<Loya
 
   private static final GenericType<String> GENERIC_TYPE = new GenericType<String>(){};
 
-  private static final GenericType<LocalDateTime> GENERIC_TYPE1 = new GenericType<LocalDateTime>(){};
+  private static final GenericType<Instant> GENERIC_TYPE1 = new GenericType<Instant>(){};
 
   private static final GenericType<Long> GENERIC_TYPE2 = new GenericType<Long>(){};
 
@@ -104,7 +104,7 @@ public class LoyaltyAccountHelper__MapperGenerated extends EntityHelperBase<Loya
     }
     if (!lenient || hasProperty(target, "last_updated")) {
       if (entity.getLastUpdated() != null || nullSavingStrategy == NullSavingStrategy.SET_TO_NULL) {
-        target = target.set("last_updated", entity.getLastUpdated(), LocalDateTime.class);
+        target = target.set("last_updated", entity.getLastUpdated(), Instant.class);
       }
     }
     return target;
@@ -134,7 +134,7 @@ public class LoyaltyAccountHelper__MapperGenerated extends EntityHelperBase<Loya
       returnValue.setOrderCount(propertyValue4);
     }
     if (!lenient || hasProperty(source, "last_updated")) {
-      LocalDateTime propertyValue5 = source.get("last_updated", LocalDateTime.class);
+      Instant propertyValue5 = source.get("last_updated", Instant.class);
       returnValue.setLastUpdated(propertyValue5);
     }
     return returnValue;

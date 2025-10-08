@@ -12,6 +12,7 @@ import com.datastax.oss.driver.api.mapper.entity.saving.NullSavingStrategy;
 import com.datastax.oss.driver.internal.core.util.concurrent.BlockingOperation;
 import com.datastax.oss.driver.internal.core.util.concurrent.CompletableFutures;
 import com.datastax.oss.driver.internal.mapper.DaoBase;
+import com.datastax.oss.driver.internal.querybuilder.update.DefaultUpdate;
 import java.lang.Boolean;
 import java.lang.Override;
 import java.lang.String;
@@ -36,16 +37,23 @@ public class OrderByIdDAOImpl__MapperGenerated extends DaoBase implements OrderB
 
   private final PreparedStatement saveStatement;
 
+  private final PreparedStatement updateStatement;
+
+  private final PreparedStatement deleteStatement;
+
   private final PreparedStatement findByIdStatement;
 
   private final PreparedStatement findByStatusStatement;
 
   private OrderByIdDAOImpl__MapperGenerated(MapperContext context,
       OrderByIdHelper__MapperGenerated orderByIdHelper, PreparedStatement saveStatement,
+      PreparedStatement updateStatement, PreparedStatement deleteStatement,
       PreparedStatement findByIdStatement, PreparedStatement findByStatusStatement) {
     super(context);
     this.orderByIdHelper = orderByIdHelper;
     this.saveStatement = saveStatement;
+    this.updateStatement = updateStatement;
+    this.deleteStatement = deleteStatement;
     this.findByIdStatement = findByIdStatement;
     this.findByStatusStatement = findByStatusStatement;
   }
@@ -54,6 +62,22 @@ public class OrderByIdDAOImpl__MapperGenerated extends DaoBase implements OrderB
   public void save(OrderById order) {
     BoundStatementBuilder boundStatementBuilder = saveStatement.boundStatementBuilder();
     orderByIdHelper.set(order, boundStatementBuilder, NullSavingStrategy.DO_NOT_SET, false);
+    BoundStatement boundStatement = boundStatementBuilder.build();
+    execute(boundStatement);
+  }
+
+  @Override
+  public void update(OrderById order) {
+    BoundStatementBuilder boundStatementBuilder = updateStatement.boundStatementBuilder();
+    orderByIdHelper.set(order, boundStatementBuilder, NullSavingStrategy.DO_NOT_SET, false);
+    BoundStatement boundStatement = boundStatementBuilder.build();
+    execute(boundStatement);
+  }
+
+  @Override
+  public void delete(OrderById order) {
+    BoundStatementBuilder boundStatementBuilder = deleteStatement.boundStatementBuilder();
+    boundStatementBuilder = boundStatementBuilder.set("order_id", order.getOrderId(), UUID.class);
     BoundStatement boundStatement = boundStatementBuilder.build();
     execute(boundStatement);
   }
@@ -94,6 +118,20 @@ public class OrderByIdDAOImpl__MapperGenerated extends DaoBase implements OrderB
           saveStatement_simple.getQuery());
       CompletionStage<PreparedStatement> saveStatement = prepare(saveStatement_simple, context);
       prepareStages.add(saveStatement);
+      // Prepare the statement for `update(MODELS.OrderById)`:
+      SimpleStatement updateStatement_simple = SimpleStatement.newInstance(((DefaultUpdate)orderByIdHelper.updateByPrimaryKey()).asCql());
+      LOG.debug("[{}] Preparing query `{}` for method update(MODELS.OrderById)",
+          context.getSession().getName(),
+          updateStatement_simple.getQuery());
+      CompletionStage<PreparedStatement> updateStatement = prepare(updateStatement_simple, context);
+      prepareStages.add(updateStatement);
+      // Prepare the statement for `delete(MODELS.OrderById)`:
+      SimpleStatement deleteStatement_simple = orderByIdHelper.deleteByPrimaryKeyParts(1).build();
+      LOG.debug("[{}] Preparing query `{}` for method delete(MODELS.OrderById)",
+          context.getSession().getName(),
+          deleteStatement_simple.getQuery());
+      CompletionStage<PreparedStatement> deleteStatement = prepare(deleteStatement_simple, context);
+      prepareStages.add(deleteStatement);
       // Prepare the statement for `findById(java.util.UUID)`:
       SimpleStatement findByIdStatement_simple = orderByIdHelper.selectByPrimaryKeyParts(1).build();
       LOG.debug("[{}] Preparing query `{}` for method findById(java.util.UUID)",
@@ -114,6 +152,8 @@ public class OrderByIdDAOImpl__MapperGenerated extends DaoBase implements OrderB
           .thenApply(v -> (OrderByIdDAO) new OrderByIdDAOImpl__MapperGenerated(context,
               orderByIdHelper,
               CompletableFutures.getCompleted(saveStatement),
+              CompletableFutures.getCompleted(updateStatement),
+              CompletableFutures.getCompleted(deleteStatement),
               CompletableFutures.getCompleted(findByIdStatement),
               CompletableFutures.getCompleted(findByStatusStatement)))
           .toCompletableFuture();

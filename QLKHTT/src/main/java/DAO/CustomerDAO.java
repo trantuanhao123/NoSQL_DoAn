@@ -34,6 +34,10 @@ public interface CustomerDAO {
     @Select
     PagingIterable<Customer> findAll();
 
+    @Select(customWhereClause = "")
+    PagingIterable<Customer> findAllWithFiltering();
+
     @Delete
     void delete(Customer customer);
 }
+

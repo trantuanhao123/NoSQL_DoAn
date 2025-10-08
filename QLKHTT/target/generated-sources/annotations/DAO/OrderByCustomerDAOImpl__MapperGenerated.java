@@ -12,11 +12,13 @@ import com.datastax.oss.driver.api.mapper.entity.saving.NullSavingStrategy;
 import com.datastax.oss.driver.internal.core.util.concurrent.BlockingOperation;
 import com.datastax.oss.driver.internal.core.util.concurrent.CompletableFutures;
 import com.datastax.oss.driver.internal.mapper.DaoBase;
+import com.datastax.oss.driver.internal.querybuilder.update.DefaultUpdate;
 import java.lang.Boolean;
 import java.lang.Override;
 import java.lang.String;
 import java.lang.SuppressWarnings;
 import java.lang.Throwable;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -36,14 +38,25 @@ public class OrderByCustomerDAOImpl__MapperGenerated extends DaoBase implements 
 
   private final PreparedStatement saveStatement;
 
+  private final PreparedStatement updateStatement;
+
+  private final PreparedStatement deleteStatement;
+
+  private final PreparedStatement findByCustomerStatement;
+
   private final PreparedStatement findByCustomerAndYearMonthStatement;
 
   private OrderByCustomerDAOImpl__MapperGenerated(MapperContext context,
       OrderByCustomerHelper__MapperGenerated orderByCustomerHelper, PreparedStatement saveStatement,
+      PreparedStatement updateStatement, PreparedStatement deleteStatement,
+      PreparedStatement findByCustomerStatement,
       PreparedStatement findByCustomerAndYearMonthStatement) {
     super(context);
     this.orderByCustomerHelper = orderByCustomerHelper;
     this.saveStatement = saveStatement;
+    this.updateStatement = updateStatement;
+    this.deleteStatement = deleteStatement;
+    this.findByCustomerStatement = findByCustomerStatement;
     this.findByCustomerAndYearMonthStatement = findByCustomerAndYearMonthStatement;
   }
 
@@ -53,6 +66,33 @@ public class OrderByCustomerDAOImpl__MapperGenerated extends DaoBase implements 
     orderByCustomerHelper.set(order, boundStatementBuilder, NullSavingStrategy.DO_NOT_SET, false);
     BoundStatement boundStatement = boundStatementBuilder.build();
     execute(boundStatement);
+  }
+
+  @Override
+  public void update(OrderByCustomer order) {
+    BoundStatementBuilder boundStatementBuilder = updateStatement.boundStatementBuilder();
+    orderByCustomerHelper.set(order, boundStatementBuilder, NullSavingStrategy.DO_NOT_SET, false);
+    BoundStatement boundStatement = boundStatementBuilder.build();
+    execute(boundStatement);
+  }
+
+  @Override
+  public void delete(OrderByCustomer order) {
+    BoundStatementBuilder boundStatementBuilder = deleteStatement.boundStatementBuilder();
+    boundStatementBuilder = boundStatementBuilder.set("customer_id", order.getCustomerId(), UUID.class);
+    boundStatementBuilder = boundStatementBuilder.set("yyyy_mm", order.getYearMonth(), String.class);
+    boundStatementBuilder = boundStatementBuilder.set("order_date", order.getOrderDate(), Instant.class);
+    boundStatementBuilder = boundStatementBuilder.set("order_id", order.getOrderId(), UUID.class);
+    BoundStatement boundStatement = boundStatementBuilder.build();
+    execute(boundStatement);
+  }
+
+  @Override
+  public PagingIterable<OrderByCustomer> findByCustomer(UUID customerId) {
+    BoundStatementBuilder boundStatementBuilder = findByCustomerStatement.boundStatementBuilder();
+    boundStatementBuilder = boundStatementBuilder.set("customerId", customerId, UUID.class);
+    BoundStatement boundStatement = boundStatementBuilder.build();
+    return executeAndMapToEntityIterable(boundStatement, orderByCustomerHelper);
   }
 
   @Override
@@ -85,6 +125,27 @@ public class OrderByCustomerDAOImpl__MapperGenerated extends DaoBase implements 
           saveStatement_simple.getQuery());
       CompletionStage<PreparedStatement> saveStatement = prepare(saveStatement_simple, context);
       prepareStages.add(saveStatement);
+      // Prepare the statement for `update(MODELS.OrderByCustomer)`:
+      SimpleStatement updateStatement_simple = SimpleStatement.newInstance(((DefaultUpdate)orderByCustomerHelper.updateByPrimaryKey()).asCql());
+      LOG.debug("[{}] Preparing query `{}` for method update(MODELS.OrderByCustomer)",
+          context.getSession().getName(),
+          updateStatement_simple.getQuery());
+      CompletionStage<PreparedStatement> updateStatement = prepare(updateStatement_simple, context);
+      prepareStages.add(updateStatement);
+      // Prepare the statement for `delete(MODELS.OrderByCustomer)`:
+      SimpleStatement deleteStatement_simple = orderByCustomerHelper.deleteByPrimaryKeyParts(4).build();
+      LOG.debug("[{}] Preparing query `{}` for method delete(MODELS.OrderByCustomer)",
+          context.getSession().getName(),
+          deleteStatement_simple.getQuery());
+      CompletionStage<PreparedStatement> deleteStatement = prepare(deleteStatement_simple, context);
+      prepareStages.add(deleteStatement);
+      // Prepare the statement for `findByCustomer(java.util.UUID)`:
+      SimpleStatement findByCustomerStatement_simple = orderByCustomerHelper.selectStart().whereRaw("customer_id = :customerId ALLOW FILTERING").build();
+      LOG.debug("[{}] Preparing query `{}` for method findByCustomer(java.util.UUID)",
+          context.getSession().getName(),
+          findByCustomerStatement_simple.getQuery());
+      CompletionStage<PreparedStatement> findByCustomerStatement = prepare(findByCustomerStatement_simple, context);
+      prepareStages.add(findByCustomerStatement);
       // Prepare the statement for `findByCustomerAndYearMonth(java.util.UUID,java.lang.String)`:
       SimpleStatement findByCustomerAndYearMonthStatement_simple = orderByCustomerHelper.selectByPrimaryKeyParts(2).build();
       LOG.debug("[{}] Preparing query `{}` for method findByCustomerAndYearMonth(java.util.UUID,java.lang.String)",
@@ -98,6 +159,9 @@ public class OrderByCustomerDAOImpl__MapperGenerated extends DaoBase implements 
           .thenApply(v -> (OrderByCustomerDAO) new OrderByCustomerDAOImpl__MapperGenerated(context,
               orderByCustomerHelper,
               CompletableFutures.getCompleted(saveStatement),
+              CompletableFutures.getCompleted(updateStatement),
+              CompletableFutures.getCompleted(deleteStatement),
+              CompletableFutures.getCompleted(findByCustomerStatement),
               CompletableFutures.getCompleted(findByCustomerAndYearMonthStatement)))
           .toCompletableFuture();
     } catch (Throwable t) {

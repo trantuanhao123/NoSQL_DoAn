@@ -8,7 +8,7 @@ import com.datastax.oss.driver.api.mapper.annotations.CqlName;
 import com.datastax.oss.driver.api.mapper.annotations.Entity;
 import com.datastax.oss.driver.api.mapper.annotations.PartitionKey;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 /**
@@ -35,12 +35,12 @@ public class LoyaltyAccount {
     private int orderCount;
 
     @CqlName("last_updated")
-    private LocalDateTime lastUpdated;
+    private Instant lastUpdated;
 
     // Constructors
     public LoyaltyAccount() {}
 
-    public LoyaltyAccount(UUID customerId, long points, String tier, BigDecimal lifetimeSpent, int orderCount, LocalDateTime lastUpdated) {
+    public LoyaltyAccount(UUID customerId, long points, String tier, BigDecimal lifetimeSpent, int orderCount, Instant lastUpdated) {
         this.customerId = customerId;
         this.points = points;
         this.tier = tier;
@@ -60,6 +60,6 @@ public class LoyaltyAccount {
     public void setLifetimeSpent(BigDecimal lifetimeSpent) { this.lifetimeSpent = lifetimeSpent; }
     public int getOrderCount() { return orderCount; }
     public void setOrderCount(int orderCount) { this.orderCount = orderCount; }
-    public LocalDateTime getLastUpdated() { return lastUpdated; }
-    public void setLastUpdated(LocalDateTime lastUpdated) { this.lastUpdated = lastUpdated; }
+    public Instant getLastUpdated() { return lastUpdated; }
+    public void setLastUpdated(Instant lastUpdated) { this.lastUpdated = lastUpdated; }
 }
