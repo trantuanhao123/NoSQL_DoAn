@@ -20,13 +20,10 @@ import javax.swing.JButton;
  * @author HAO
  */
 public class frm_Main extends javax.swing.JFrame {
-
-    /**
-     * Creates new form frm_Main
-     */
     public frm_Main() {
         try {
             initComponents();
+            
             initializeButtons();
             pnMain.setLayout(new CardLayout());
             // Khởi tạo các panel
@@ -39,6 +36,7 @@ public class frm_Main extends javax.swing.JFrame {
             TimKiem panelTimKiem = new TimKiem();
 
             // Thêm các panel vào pnMain với tên định danh
+            CardLayout cl = (CardLayout) pnMain.getLayout();
             pnMain.add(panelTrangChu, "TrangChu");
             pnMain.add(panelDonHang, "DonHang");
             pnMain.add(panelKhachHang, "KhachHang");
@@ -46,13 +44,25 @@ public class frm_Main extends javax.swing.JFrame {
             pnMain.add(panelLaptop, "Laptop");
             pnMain.add(panelThongKe, "ThongKe");
             pnMain.add(panelTimKiem, "TimKiem");
-
-            // Hiển thị mặc định TrangChu
-            CardLayout cl = (CardLayout) pnMain.getLayout();
-            cl.show(pnMain, "TrangChu");
-
+            switchPanel("TrangChu",btnTrangChu);
         } catch (Exception e) {
+            e.printStackTrace();
         }
+    }
+
+    private void switchPanel(String panelName, JButton clickedButton) {
+        // 1. Reset màu tất cả các nút
+        resetButtonColors();
+        // 2. Đặt màu cho nút vừa được nhấn
+        clickedButton.setBackground(Color.BLUE);
+
+        // 3. Lấy CardLayout và hiển thị panel tương ứng
+        CardLayout cl = (CardLayout) pnMain.getLayout();
+        cl.show(pnMain, panelName);
+
+        // 4. Cập nhật lại giao diện của pnMain
+        pnMain.revalidate();
+        pnMain.repaint();
     }
     // Khai báo mảng chứa các nút
     private JButton[] buttons;
@@ -250,11 +260,11 @@ public class frm_Main extends javax.swing.JFrame {
         pnMain.setLayout(pnMainLayout);
         pnMainLayout.setHorizontalGroup(
             pnMainLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 722, Short.MAX_VALUE)
+            .addGap(0, 732, Short.MAX_VALUE)
         );
         pnMainLayout.setVerticalGroup(
             pnMainLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 0, Short.MAX_VALUE)
+            .addGap(0, 497, Short.MAX_VALUE)
         );
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
@@ -264,7 +274,7 @@ public class frm_Main extends javax.swing.JFrame {
             .addGroup(layout.createSequentialGroup()
                 .addComponent(pnSideBar, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(18, 18, 18)
-                .addComponent(pnMain, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addComponent(pnMain, javax.swing.GroupLayout.DEFAULT_SIZE, 732, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -279,10 +289,7 @@ public class frm_Main extends javax.swing.JFrame {
     }// </editor-fold>//GEN-END:initComponents
 
     private void btnTrangChuActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnTrangChuActionPerformed
-        resetButtonColors();
-        btnTrangChu.setBackground(Color.BLUE);
-        CardLayout cl = (CardLayout) pnMain.getLayout();
-        cl.show(pnMain, "TrangChu");
+        switchPanel("TrangChu", btnTrangChu);
     }//GEN-LAST:event_btnTrangChuActionPerformed
 
     private void btnThoatActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnThoatActionPerformed
@@ -290,45 +297,27 @@ public class frm_Main extends javax.swing.JFrame {
     }//GEN-LAST:event_btnThoatActionPerformed
 
     private void btnKhachHangActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnKhachHangActionPerformed
-        resetButtonColors();
-        btnKhachHang.setBackground(Color.BLUE);
-        CardLayout cl = (CardLayout) pnMain.getLayout();
-        cl.show(pnMain, "KhachHang");
+        switchPanel("KhachHang", btnKhachHang);
     }//GEN-LAST:event_btnKhachHangActionPerformed
 
     private void btnKhachHangVipActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnKhachHangVipActionPerformed
-        resetButtonColors();
-        btnKhachHangVip.setBackground(Color.BLUE);
-        CardLayout cl = (CardLayout) pnMain.getLayout();
-        cl.show(pnMain, "KhachHangVip");
+        switchPanel("KhachHangVip", btnKhachHangVip);
     }//GEN-LAST:event_btnKhachHangVipActionPerformed
 
     private void btnSanPhamActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSanPhamActionPerformed
-        resetButtonColors();
-        btnSanPham.setBackground(Color.BLUE);
-        CardLayout cl = (CardLayout) pnMain.getLayout();
-        cl.show(pnMain, "Laptop");
+        switchPanel("Laptop", btnSanPham);
     }//GEN-LAST:event_btnSanPhamActionPerformed
 
     private void btnDonHangActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnDonHangActionPerformed
-        resetButtonColors();
-        btnDonHang.setBackground(Color.BLUE);
-        CardLayout cl = (CardLayout) pnMain.getLayout();
-        cl.show(pnMain, "DonHang");
+        switchPanel("DonHang", btnDonHang);
     }//GEN-LAST:event_btnDonHangActionPerformed
 
     private void btnTimKiemActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnTimKiemActionPerformed
-        resetButtonColors();
-        btnTimKiem.setBackground(Color.BLUE);
-        CardLayout cl = (CardLayout) pnMain.getLayout();
-        cl.show(pnMain, "TimKiem");
+        switchPanel("TimKiem", btnTimKiem);
     }//GEN-LAST:event_btnTimKiemActionPerformed
 
     private void btnThongKeActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnThongKeActionPerformed
-        resetButtonColors();
-        btnThongKe.setBackground(Color.BLUE);
-        CardLayout cl = (CardLayout) pnMain.getLayout();
-        cl.show(pnMain, "ThongKe");
+        switchPanel("ThongKe", btnThongKe);
     }//GEN-LAST:event_btnThongKeActionPerformed
 
     /**

@@ -8,16 +8,15 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.release>23</maven.compiler.release>
-        <exec.mainClass>com.mycompany.qlkhtt.GUI.frm_Main</exec.mainClass>
+        <exec.mainClass>com.mycompany.qlkhtt.gui.frm_Main</exec.mainClass>
     </properties>
     <dependencies>
         <!-- Apache Cassandra Java Driver Core -->
         <dependency>
             <groupId>com.datastax.oss</groupId>
-            <artifactId>java-driver-core</artifactId>
+            <artifactId>java-driver-core-shaded</artifactId>
             <version>4.17.0</version>
         </dependency>
-        <!-- Apache Cassandra Java Driver Query Builder -->
         <dependency>
             <groupId>com.datastax.oss</groupId>
             <artifactId>java-driver-query-builder</artifactId>
@@ -28,6 +27,13 @@
             <groupId>com.datastax.oss</groupId>
             <artifactId>java-driver-mapper-runtime</artifactId>
             <version>4.17.0</version>
+        </dependency>
+        <!-- Apache Cassandra Java Driver Mapper Processor -->
+        <dependency>
+            <groupId>com.datastax.oss</groupId>
+            <artifactId>java-driver-mapper-processor</artifactId>
+            <version>4.17.0</version>
+            <scope>provided</scope>
         </dependency>
         <!-- SLF4J API for logging -->
         <dependency>
@@ -50,6 +56,13 @@
                 <version>3.13.0</version>
                 <configuration>
                     <release>23</release>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>com.datastax.oss</groupId>
+                            <artifactId>java-driver-mapper-processor</artifactId>
+                            <version>4.17.0</version>
+                        </path>
+                    </annotationProcessorPaths>
                 </configuration>
             </plugin>
             <plugin>
@@ -67,7 +80,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>com.mycompany.qlkhtt.GUI.frm_Main</mainClass>
+                            <mainClass>com.mycompany.qlkhtt.gui.frm_Main</mainClass>
                         </manifest>
                     </archive>
                 </configuration>

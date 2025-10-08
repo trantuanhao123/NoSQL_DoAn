@@ -11,7 +11,7 @@
     <AuxValue name="FormSettings_listenerGenerationStyle" type="java.lang.Integer" value="0"/>
     <AuxValue name="FormSettings_variablesLocal" type="java.lang.Boolean" value="false"/>
     <AuxValue name="FormSettings_variablesModifier" type="java.lang.Integer" value="2"/>
-    <AuxValue name="designerSize" type="java.awt.Dimension" value="-84,-19,0,5,115,114,0,18,106,97,118,97,46,97,119,116,46,68,105,109,101,110,115,105,111,110,65,-114,-39,-41,-84,95,68,20,2,0,2,73,0,6,104,101,105,103,104,116,73,0,5,119,105,100,116,104,120,112,0,0,2,-52,0,0,3,82"/>
+    <AuxValue name="designerSize" type="java.awt.Dimension" value="-84,-19,0,5,115,114,0,18,106,97,118,97,46,97,119,116,46,68,105,109,101,110,115,105,111,110,65,-114,-39,-41,-84,95,68,20,2,0,2,73,0,6,104,101,105,103,104,116,73,0,5,119,105,100,116,104,120,112,0,0,2,-108,0,0,3,82"/>
   </AuxValues>
 
   <Layout class="org.netbeans.modules.form.compat2.layouts.DesignBorderLayout"/>
@@ -39,7 +39,7 @@
           <Layout>
             <DimensionLayout dim="0">
               <Group type="103" groupAlignment="0" attributes="0">
-                  <Group type="102" alignment="1" attributes="0">
+                  <Group type="102" attributes="0">
                       <EmptySpace max="32767" attributes="0"/>
                       <Group type="103" groupAlignment="0" attributes="0">
                           <Group type="102" alignment="0" attributes="0">
@@ -52,34 +52,42 @@
                               <Component id="btnNewKH" min="-2" pref="205" max="-2" attributes="0"/>
                           </Group>
                           <Group type="102" alignment="0" attributes="0">
-                              <Group type="103" groupAlignment="2" attributes="0">
-                                  <Component id="jLabel2" linkSize="1" alignment="2" min="-2" pref="100" max="-2" attributes="0"/>
-                                  <Component id="jLabel5" linkSize="1" alignment="2" min="-2" max="-2" attributes="0"/>
-                                  <Component id="jLabel1" linkSize="1" alignment="2" min="-2" pref="100" max="-2" attributes="0"/>
+                              <Group type="103" groupAlignment="0" attributes="0">
+                                  <Group type="103" groupAlignment="2" attributes="0">
+                                      <Component id="jLabel2" linkSize="1" alignment="2" min="-2" pref="100" max="-2" attributes="0"/>
+                                      <Component id="jLabel5" linkSize="1" alignment="2" min="-2" max="-2" attributes="0"/>
+                                      <Component id="jLabel1" linkSize="1" alignment="2" min="-2" pref="100" max="-2" attributes="0"/>
+                                  </Group>
+                                  <Component id="jLabel7" alignment="1" min="-2" max="-2" attributes="0"/>
                               </Group>
                               <EmptySpace max="-2" attributes="0"/>
                               <Group type="103" groupAlignment="0" attributes="0">
-                                  <Component id="jtfDiaChi" linkSize="3" alignment="0" min="-2" max="-2" attributes="0"/>
-                                  <Component id="jtfHoTen" linkSize="3" alignment="0" min="-2" pref="164" max="-2" attributes="0"/>
-                                  <Component id="jtfSDT" linkSize="3" alignment="0" min="-2" max="-2" attributes="0"/>
-                              </Group>
-                              <EmptySpace type="unrelated" min="-2" max="-2" attributes="0"/>
-                              <Group type="103" groupAlignment="0" max="-2" attributes="0">
-                                  <Group type="102" alignment="0" attributes="0">
-                                      <Component id="jLabel6" linkSize="4" min="-2" max="-2" attributes="0"/>
-                                      <EmptySpace max="-2" attributes="0"/>
-                                      <Component id="jCheckBox1" max="32767" attributes="0"/>
+                                  <Group type="102" attributes="0">
+                                      <Group type="103" groupAlignment="0" attributes="0">
+                                          <Component id="txtDiaChi" linkSize="3" alignment="0" min="-2" max="-2" attributes="0"/>
+                                          <Component id="txtHoTen" linkSize="3" alignment="0" min="-2" pref="164" max="-2" attributes="0"/>
+                                          <Component id="txtSDT" linkSize="3" alignment="0" min="-2" max="-2" attributes="0"/>
+                                      </Group>
+                                      <EmptySpace min="-2" pref="31" max="-2" attributes="0"/>
+                                      <Group type="103" groupAlignment="0" max="-2" attributes="0">
+                                          <Group type="102" alignment="0" attributes="0">
+                                              <Component id="jLabel6" linkSize="4" min="-2" max="-2" attributes="0"/>
+                                              <EmptySpace max="-2" attributes="0"/>
+                                              <Component id="jCheckBox1" max="32767" attributes="0"/>
+                                          </Group>
+                                          <Group type="102" alignment="0" attributes="0">
+                                              <Component id="jLabel4" linkSize="4" min="-2" pref="53" max="-2" attributes="0"/>
+                                              <EmptySpace max="-2" attributes="0"/>
+                                              <Component id="cboGioiTinh" max="32767" attributes="0"/>
+                                          </Group>
+                                          <Group type="102" alignment="1" attributes="0">
+                                              <Component id="jLabel3" linkSize="4" min="-2" pref="78" max="-2" attributes="0"/>
+                                              <EmptySpace max="-2" attributes="0"/>
+                                              <Component id="txtEmail" min="-2" pref="109" max="-2" attributes="0"/>
+                                          </Group>
+                                      </Group>
                                   </Group>
-                                  <Group type="102" alignment="0" attributes="0">
-                                      <Component id="jLabel4" linkSize="4" min="-2" pref="53" max="-2" attributes="0"/>
-                                      <EmptySpace max="-2" attributes="0"/>
-                                      <Component id="jtfGT" max="32767" attributes="0"/>
-                                  </Group>
-                                  <Group type="102" alignment="1" attributes="0">
-                                      <Component id="jLabel3" linkSize="4" min="-2" pref="78" max="-2" attributes="0"/>
-                                      <EmptySpace max="-2" attributes="0"/>
-                                      <Component id="jtfEmail" min="-2" pref="109" max="-2" attributes="0"/>
-                                  </Group>
+                                  <Component id="txtNgaySinh" min="-2" pref="164" max="-2" attributes="0"/>
                               </Group>
                           </Group>
                       </Group>
@@ -92,24 +100,24 @@
                   <Group type="102" attributes="0">
                       <EmptySpace min="-2" pref="28" max="-2" attributes="0"/>
                       <Group type="103" groupAlignment="3" attributes="0">
-                          <Component id="jtfHoTen" linkSize="2" alignment="3" min="-2" max="-2" attributes="0"/>
+                          <Component id="txtHoTen" linkSize="2" alignment="3" min="-2" max="-2" attributes="0"/>
                           <Component id="jLabel1" linkSize="2" alignment="3" min="-2" max="-2" attributes="0"/>
                           <Component id="jLabel3" linkSize="5" alignment="3" min="-2" max="-2" attributes="0"/>
-                          <Component id="jtfEmail" linkSize="7" alignment="3" min="-2" max="-2" attributes="0"/>
+                          <Component id="txtEmail" linkSize="7" alignment="3" min="-2" max="-2" attributes="0"/>
                       </Group>
                       <Group type="103" groupAlignment="0" attributes="0">
                           <Group type="102" attributes="0">
                               <EmptySpace min="-2" pref="12" max="-2" attributes="0"/>
                               <Group type="103" groupAlignment="3" attributes="0">
                                   <Component id="jLabel2" linkSize="2" alignment="3" min="-2" max="-2" attributes="0"/>
-                                  <Component id="jtfSDT" linkSize="2" alignment="3" min="-2" max="-2" attributes="0"/>
+                                  <Component id="txtSDT" linkSize="2" alignment="3" min="-2" max="-2" attributes="0"/>
                               </Group>
                           </Group>
                           <Group type="102" alignment="0" attributes="0">
                               <EmptySpace min="-2" pref="9" max="-2" attributes="0"/>
                               <Group type="103" groupAlignment="3" attributes="0">
                                   <Component id="jLabel4" linkSize="5" alignment="3" min="-2" max="-2" attributes="0"/>
-                                  <Component id="jtfGT" linkSize="7" alignment="3" min="-2" max="-2" attributes="0"/>
+                                  <Component id="cboGioiTinh" alignment="3" min="-2" max="-2" attributes="0"/>
                               </Group>
                           </Group>
                       </Group>
@@ -117,21 +125,26 @@
                       <Group type="103" groupAlignment="0" attributes="0">
                           <Group type="103" groupAlignment="3" attributes="0">
                               <Component id="jLabel5" linkSize="2" alignment="3" min="-2" max="-2" attributes="0"/>
-                              <Component id="jtfDiaChi" linkSize="2" alignment="3" min="-2" max="-2" attributes="0"/>
+                              <Component id="txtDiaChi" linkSize="2" alignment="3" min="-2" max="-2" attributes="0"/>
                           </Group>
                           <Group type="103" alignment="0" groupAlignment="3" attributes="0">
                               <Component id="jLabel6" linkSize="5" alignment="3" min="-2" max="-2" attributes="0"/>
                               <Component id="jCheckBox1" linkSize="7" alignment="3" min="-2" max="-2" attributes="0"/>
                           </Group>
                       </Group>
-                      <EmptySpace min="-2" pref="99" max="-2" attributes="0"/>
+                      <EmptySpace type="separate" max="-2" attributes="0"/>
+                      <Group type="103" groupAlignment="3" attributes="0">
+                          <Component id="txtNgaySinh" alignment="3" min="-2" max="-2" attributes="0"/>
+                          <Component id="jLabel7" alignment="3" min="-2" max="-2" attributes="0"/>
+                      </Group>
+                      <EmptySpace min="-2" pref="10" max="-2" attributes="0"/>
                       <Group type="103" groupAlignment="3" attributes="0">
                           <Component id="btnDelKH" linkSize="9" alignment="3" min="-2" max="-2" attributes="0"/>
                           <Component id="btnEditKH" linkSize="9" alignment="3" min="-2" max="-2" attributes="0"/>
                           <Component id="btnAddKH" linkSize="9" alignment="3" min="-2" max="-2" attributes="0"/>
                           <Component id="btnNewKH" alignment="3" min="-2" max="-2" attributes="0"/>
                       </Group>
-                      <EmptySpace min="-2" pref="17" max="-2" attributes="0"/>
+                      <EmptySpace min="-2" pref="10" max="-2" attributes="0"/>
                   </Group>
               </Group>
             </DimensionLayout>
@@ -143,7 +156,7 @@
                 <Property name="text" type="java.lang.String" value="H&#x1ecd; v&#xe0; t&#xea;n"/>
               </Properties>
             </Component>
-            <Component class="javax.swing.JTextField" name="jtfHoTen">
+            <Component class="javax.swing.JTextField" name="txtHoTen">
               <Properties>
                 <Property name="preferredSize" type="java.awt.Dimension" editor="org.netbeans.beaninfo.editors.DimensionEditor">
                   <Dimension value="[100, 22]"/>
@@ -159,7 +172,7 @@
                 </Property>
               </Properties>
             </Component>
-            <Component class="javax.swing.JTextField" name="jtfSDT">
+            <Component class="javax.swing.JTextField" name="txtSDT">
             </Component>
             <Component class="javax.swing.JLabel" name="jLabel3">
               <Properties>
@@ -171,15 +184,13 @@
                 <Property name="requestFocusEnabled" type="boolean" value="false"/>
               </Properties>
             </Component>
-            <Component class="javax.swing.JTextField" name="jtfEmail">
+            <Component class="javax.swing.JTextField" name="txtEmail">
             </Component>
             <Component class="javax.swing.JLabel" name="jLabel4">
               <Properties>
                 <Property name="horizontalAlignment" type="int" value="11"/>
-                <Property name="text" type="java.lang.String" value="S&#x1ebd;"/>
+                <Property name="text" type="java.lang.String" value="Gi&#x1edb;i T&#xed;nh"/>
               </Properties>
-            </Component>
-            <Component class="javax.swing.JTextField" name="jtfGT">
             </Component>
             <Component class="javax.swing.JLabel" name="jLabel5">
               <Properties>
@@ -187,21 +198,24 @@
                 <Property name="text" type="java.lang.String" value="&#x110;&#x1ecb;a ch&#x1ec9;"/>
               </Properties>
             </Component>
-            <Component class="javax.swing.JTextField" name="jtfDiaChi">
+            <Component class="javax.swing.JTextField" name="txtDiaChi">
               <Events>
-                <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="jtfDiaChiActionPerformed"/>
+                <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="txtDiaChiActionPerformed"/>
               </Events>
             </Component>
             <Component class="javax.swing.JLabel" name="jLabel6">
               <Properties>
                 <Property name="horizontalAlignment" type="int" value="11"/>
-                <Property name="text" type="java.lang.String" value="Alive"/>
+                <Property name="text" type="java.lang.String" value="Tr&#x1ea1;ng Th&#xe1;i"/>
               </Properties>
             </Component>
             <Component class="javax.swing.JCheckBox" name="jCheckBox1">
               <Properties>
-                <Property name="text" type="java.lang.String" value="Y E S"/>
+                <Property name="text" type="java.lang.String" value="C&#xf3;"/>
               </Properties>
+              <Events>
+                <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="jCheckBox1ActionPerformed"/>
+              </Events>
             </Component>
             <Component class="javax.swing.JButton" name="btnAddKH">
               <Properties>
@@ -255,6 +269,30 @@
                   <Dimension value="[50, 50]"/>
                 </Property>
               </Properties>
+            </Component>
+            <Component class="javax.swing.JComboBox" name="cboGioiTinh">
+              <Properties>
+                <Property name="model" type="javax.swing.ComboBoxModel" editor="org.netbeans.modules.form.editors2.ComboBoxModelEditor">
+                  <StringArray count="2">
+                    <StringItem index="0" value="Nam"/>
+                    <StringItem index="1" value="N&#x1eef;"/>
+                  </StringArray>
+                </Property>
+              </Properties>
+              <AuxValues>
+                <AuxValue name="JavaCodeGenerator_TypeParameters" type="java.lang.String" value="&lt;String&gt;"/>
+              </AuxValues>
+            </Component>
+            <Component class="javax.swing.JLabel" name="jLabel7">
+              <Properties>
+                <Property name="horizontalAlignment" type="int" value="11"/>
+                <Property name="text" type="java.lang.String" value="Ng&#xe0;y Sinh"/>
+              </Properties>
+            </Component>
+            <Component class="javax.swing.JTextField" name="txtNgaySinh">
+              <Events>
+                <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="txtNgaySinhActionPerformed"/>
+              </Events>
             </Component>
           </SubComponents>
         </Container>

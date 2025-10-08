@@ -4,6 +4,8 @@
 
 package com.mycompany.qlkhtt;
 
+import GUI.frm_Main;
+
 /**
  *
  * @author HAO
@@ -11,6 +13,7 @@ package com.mycompany.qlkhtt;
 public class QLKHTT {
 
     public static void main(String[] args) {
-        System.out.println("Hello World!");
+        frm_Main abc = new frm_Main();
+        abc.setVisible(true);
     }
 }
