@@ -1,36 +1,149 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Interface.java to edit this template
- */
 package DAO;
 
 import MODELS.OrderById;
-import com.datastax.oss.driver.api.core.PagingIterable;
-import com.datastax.oss.driver.api.mapper.annotations.Dao;
-import com.datastax.oss.driver.api.mapper.annotations.Delete;
-import com.datastax.oss.driver.api.mapper.annotations.Insert;
-import com.datastax.oss.driver.api.mapper.annotations.Select;
-import com.datastax.oss.driver.api.mapper.annotations.Update;
-import java.util.UUID;
+import MODELS.OrderItem;
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.cql.*;
+import com.datastax.oss.driver.api.core.data.UdtValue;
+import com.datastax.oss.driver.api.core.type.UserDefinedType;
+import java.util.*;
 
-/**
- *
- * @author HAO
- */
-@Dao
-public interface OrderByIdDAO {
-    @Insert
-    void save(OrderById order);
+public class OrderByIdDAO {
+    private final CqlSession session;
 
-    @Update // Bổ sung Update
-    void update(OrderById order);
+    public OrderByIdDAO(CqlSession session) {
+        this.session = session;
+    }
 
-    @Delete // Bổ sung Delete
-    void delete(OrderById order);
-    
-    @Select
-    OrderById findById(UUID orderId);
+    // ✅ 1. Lưu Order
+    public void save(OrderById order) {
+        String query = "INSERT INTO orders_by_id (order_id, customer_id, order_date, total, items, status) "
+                     + "VALUES (?, ?, ?, ?, ?, ?)";
+        PreparedStatement ps = session.prepare(query);
 
-    @Select(customWhereClause = "status = :status")
-    PagingIterable<OrderById> findByStatus(String status);
+        List<UdtValue> itemValues = new ArrayList<>();
+        UserDefinedType orderItemType = session.getMetadata()
+                .getKeyspace(session.getKeyspace().get())
+                .flatMap(ks -> ks.getUserDefinedType("order_item"))
+                .orElseThrow(() -> new IllegalStateException("UDT order_item not found"));
+
+        for (OrderItem item : order.getItems()) {
+            UdtValue udt = orderItemType.newValue()
+                    .setString("product_id", item.getProductId())
+                    .setString("model", item.getModel())
+                    .setInt("qty", item.getQuantity())
+                    .setBigDecimal("price", item.getPrice());
+            itemValues.add(udt);
+        }
+
+        session.execute(ps.bind(
+                order.getOrderId(),
+                order.getCustomerId(),
+                order.getOrderDate(),
+                order.getTotal(),
+                itemValues,
+                order.getStatus()
+        ));
+    }
+
+    // ✅ 2. Lấy Order theo ID
+    public OrderById findById(UUID orderId) {
+        String query = "SELECT * FROM orders_by_id WHERE order_id = ?";
+        PreparedStatement ps = session.prepare(query);
+        Row row = session.execute(ps.bind(orderId)).one();
+        if (row == null) return null;
+
+        List<OrderItem> items = new ArrayList<>();
+        List<UdtValue> udtItems = row.getList("items", UdtValue.class);
+        if (udtItems != null) {
+            for (UdtValue udt : udtItems) {
+                OrderItem item = new OrderItem(
+                        udt.getString("product_id"),
+                        udt.getString("model"),
+                        udt.getInt("qty"),
+                        udt.getBigDecimal("price")
+                );
+                items.add(item);
+            }
+        }
+
+        return new OrderById(
+                row.getUuid("order_id"),
+                row.getUuid("customer_id"),
+                row.getInstant("order_date"),
+                row.getBigDecimal("total"),
+                items,
+                row.getString("status")
+        );
+    }
+
+    // ✅ 3. Cập nhật Order
+    public void update(OrderById order) {
+        String query = "UPDATE orders_by_id SET customer_id=?, order_date=?, total=?, items=?, status=? WHERE order_id=?";
+        PreparedStatement ps = session.prepare(query);
+
+        List<UdtValue> itemValues = new ArrayList<>();
+        UserDefinedType orderItemType = session.getMetadata()
+                .getKeyspace(session.getKeyspace().get())
+                .flatMap(ks -> ks.getUserDefinedType("order_item"))
+                .orElseThrow(() -> new IllegalStateException("UDT order_item not found"));
+
+        for (OrderItem item : order.getItems()) {
+            UdtValue udt = orderItemType.newValue()
+                    .setString("product_id", item.getProductId())
+                    .setString("model", item.getModel())
+                    .setInt("qty", item.getQuantity())
+                    .setBigDecimal("price", item.getPrice());
+            itemValues.add(udt);
+        }
+
+        session.execute(ps.bind(
+                order.getCustomerId(),
+                order.getOrderDate(),
+                order.getTotal(),
+                itemValues,
+                order.getStatus(),
+                order.getOrderId()
+        ));
+    }
+
+    // ✅ 4. Xóa Order
+    public void delete(UUID orderId) {
+        String query = "DELETE FROM orders_by_id WHERE order_id = ?";
+        PreparedStatement ps = session.prepare(query);
+        session.execute(ps.bind(orderId));
+    }
+
+    // ✅ 5. Lấy tất cả Order theo status (tuỳ chọn)
+    public List<OrderById> findByStatus(String status) {
+        String query = "SELECT * FROM orders_by_id WHERE status = ?";
+        PreparedStatement ps = session.prepare(query);
+        ResultSet rs = session.execute(ps.bind(status));
+
+        List<OrderById> result = new ArrayList<>();
+        for (Row row : rs) {
+            List<OrderItem> items = new ArrayList<>();
+            List<UdtValue> udtItems = row.getList("items", UdtValue.class);
+            if (udtItems != null) {
+                for (UdtValue udt : udtItems) {
+                    items.add(new OrderItem(
+                            udt.getString("product_id"),
+                            udt.getString("model"),
+                            udt.getInt("qty"),
+                            udt.getBigDecimal("price")
+                    ));
+                }
+            }
+
+            result.add(new OrderById(
+                    row.getUuid("order_id"),
+                    row.getUuid("customer_id"),
+                    row.getInstant("order_date"),
+                    row.getBigDecimal("total"),
+                    items,
+                    row.getString("status")
+            ));
+        }
+        return result;
+    }
 }

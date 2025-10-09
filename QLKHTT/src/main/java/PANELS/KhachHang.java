@@ -5,17 +5,15 @@
 package PANELS;
 
 import DAO.CustomerDAO;
-import DAO.DaoMapper;
-import DAO.DaoMapperBuilder;
 import KetNoiCSDL.KetNoICSDL;
 import MODELS.Customer;
 import com.datastax.oss.driver.api.core.CqlSession;
-import com.datastax.oss.driver.api.core.PagingIterable;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.List;
 import java.util.UUID;
 import javax.swing.JOptionPane;
 import javax.swing.event.ListSelectionEvent;
@@ -40,28 +38,25 @@ public class KhachHang extends javax.swing.JPanel {
     }
 
     private void init() {
-        // 1. Kết nối và khởi tạo DAO
-        // THAY ĐỔI: Sử dụng lớp KetNoICSDL của bạn
+        // ✅ 1. Kết nối và khởi tạo DAO thủ công
         CqlSession session = KetNoICSDL.getSession();
+        customerDAO = new CustomerDAO(session);
 
-        DaoMapper daoMapper = new DaoMapperBuilder(session).build();
-        customerDAO = daoMapper.customerDAO();
-
-        // 2. Cấu hình bảng
+        // ✅ 2. Chuẩn bị bảng
         tblModel = (DefaultTableModel) tblKH.getModel();
-        tblModel.setRowCount(0); // Xóa các dòng dữ liệu mẫu
+        tblModel.setRowCount(0);
 
-        // 3. Tải dữ liệu lần đầu
+        // ✅ 3. Load dữ liệu ban đầu
         loadDataToTable();
 
-        // 4. Thêm listener để bắt sự kiện click vào dòng trên bảng
+        // ✅ 4. Sự kiện click chọn hàng
         tblKH.getSelectionModel().addListSelectionListener((ListSelectionEvent event) -> {
             if (!event.getValueIsAdjusting() && tblKH.getSelectedRow() != -1) {
                 showDetail();
             }
         });
 
-        // 5. Thêm Action Listeners cho các nút
+        // ✅ 5. Action cho nút
         btnAddKH.addActionListener(e -> addCustomer());
         btnEditKH.addActionListener(e -> updateCustomer());
         btnDelKH.addActionListener(e -> deleteCustomer());
@@ -69,22 +64,21 @@ public class KhachHang extends javax.swing.JPanel {
     }
 
     private void loadDataToTable() {
-        tblModel.setRowCount(0); // Xóa hết dữ liệu cũ trên bảng
+        tblModel.setRowCount(0);
         try {
-            PagingIterable<Customer> customers = customerDAO.findAll();
-            for (Customer cus : customers) {
-                Object[] row = new Object[]{
-                    cus.getCustomerId(),
-                    cus.getFullName(),
-                    cus.getEmail(),
-                    cus.getPhone(),
-                    cus.getDob(),
-                    cus.getGender(),
-                    cus.getAddress(),
-                    cus.getCreatedAt() != null ? cus.getCreatedAt().atZone(ZoneId.systemDefault()).toLocalDate() : null,
-                    cus.getStatus()
-                };
-                tblModel.addRow(row);
+            List<Customer> customers = customerDAO.findAll();
+            for (Customer c : customers) {
+                tblModel.addRow(new Object[]{
+                    c.getCustomerId(),
+                    c.getFullName(),
+                    c.getEmail(),
+                    c.getPhone(),
+                    c.getDob(),
+                    c.getGender(),
+                    c.getAddress(),
+                    c.getCreatedAt() != null ? c.getCreatedAt().atZone(ZoneId.systemDefault()).toLocalDate() : null,
+                    c.getStatus()
+                });
             }
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Lỗi tải dữ liệu: " + e.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
@@ -95,24 +89,23 @@ public class KhachHang extends javax.swing.JPanel {
     private void showDetail() {
         int selectedRow = tblKH.getSelectedRow();
         if (selectedRow >= 0) {
-            // Lấy UUID từ cột đầu tiên
             selectedCustomerId = (UUID) tblModel.getValueAt(selectedRow, 0);
-
             txtHoTen.setText(tblModel.getValueAt(selectedRow, 1).toString());
-            txtEmail.setText(tblModel.getValueAt(selectedRow, 2) != null ? tblModel.getValueAt(selectedRow, 2).toString() : "");
-            txtSDT.setText(tblModel.getValueAt(selectedRow, 3).toString());
-            txtNgaySinh.setText(tblModel.getValueAt(selectedRow, 4).toString());
-            cboGioiTinh.setSelectedItem(tblModel.getValueAt(selectedRow, 5).toString());
-            txtDiaChi.setText(tblModel.getValueAt(selectedRow, 6) != null ? tblModel.getValueAt(selectedRow, 6).toString() : "");
+            txtEmail.setText(valueOrEmpty(tblModel.getValueAt(selectedRow, 2)));
+            txtSDT.setText(valueOrEmpty(tblModel.getValueAt(selectedRow, 3)));
+            txtNgaySinh.setText(valueOrEmpty(tblModel.getValueAt(selectedRow, 4)));
+            cboGioiTinh.setSelectedItem(valueOrEmpty(tblModel.getValueAt(selectedRow, 5)));
+            txtDiaChi.setText(valueOrEmpty(tblModel.getValueAt(selectedRow, 6)));
 
-            String status = tblModel.getValueAt(selectedRow, 8).toString();
+            String status = valueOrEmpty(tblModel.getValueAt(selectedRow, 8));
             jCheckBox1.setSelected(status.equalsIgnoreCase("Active"));
         }
     }
 
-    /**
-     * Xóa trắng các ô nhập liệu để chuẩn bị thêm mới
-     */
+    private String valueOrEmpty(Object val) {
+        return val != null ? val.toString() : "";
+    }
+
     private void clearForm() {
         selectedCustomerId = null;
         txtHoTen.setText("");
@@ -121,16 +114,11 @@ public class KhachHang extends javax.swing.JPanel {
         txtDiaChi.setText("");
         txtNgaySinh.setText("");
         cboGioiTinh.setSelectedIndex(0);
-        jCheckBox1.setSelected(true); // Mặc định là Active khi tạo mới
+        jCheckBox1.setSelected(true);
         tblKH.clearSelection();
         txtHoTen.requestFocus();
     }
 
-    /**
-     * Lấy dữ liệu từ form và tạo đối tượng Customer
-     *
-     * @return một đối tượng Customer hoặc null nếu dữ liệu không hợp lệ
-     */
     private Customer getModelFromForm() {
         String fullName = txtHoTen.getText().trim();
         String email = txtEmail.getText().trim();
@@ -138,107 +126,90 @@ public class KhachHang extends javax.swing.JPanel {
         String address = txtDiaChi.getText().trim();
         String dobString = txtNgaySinh.getText().trim();
 
-        // Validate dữ liệu
         if (fullName.isEmpty() || phone.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Họ tên và Số điện thoại không được để trống!", "Cảnh báo", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Họ tên và SĐT không được trống!", "Cảnh báo", JOptionPane.WARNING_MESSAGE);
             return null;
         }
 
         LocalDate dob;
         try {
-            // Định dạng ngày tháng năm là yyyy-MM-dd
             dob = LocalDate.parse(dobString, DateTimeFormatter.ISO_LOCAL_DATE);
         } catch (DateTimeParseException e) {
-            JOptionPane.showMessageDialog(this, "Ngày sinh không hợp lệ. Vui lòng nhập theo định dạng YYYY-MM-DD.", "Lỗi định dạng", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Ngày sinh sai định dạng (YYYY-MM-DD).", "Lỗi", JOptionPane.ERROR_MESSAGE);
             return null;
         }
 
-        String gender = cboGioiTinh.getSelectedItem().toString();
-        String status = jCheckBox1.isSelected() ? "Active" : "Inactive";
-
-        Customer customer = new Customer();
-        customer.setFullName(fullName);
-        customer.setEmail(email);
-        customer.setPhone(phone);
-        customer.setDob(dob);
-        customer.setGender(gender);
-        customer.setAddress(address);
-        customer.setStatus(status);
-
-        return customer;
+        Customer c = new Customer();
+        c.setFullName(fullName);
+        c.setEmail(email);
+        c.setPhone(phone);
+        c.setDob(dob);
+        c.setGender(cboGioiTinh.getSelectedItem().toString());
+        c.setAddress(address);
+        c.setStatus(jCheckBox1.isSelected() ? "Active" : "Inactive");
+        return c;
     }
 
     private void addCustomer() {
-        Customer customer = getModelFromForm();
-        if (customer != null) {
-            try {
-                customer.setCustomerId(UUID.randomUUID()); // Tạo ID mới
-                customer.setCreatedAt(Instant.now()); // ✅ Instant thay vì LocalDateTime
+        Customer c = getModelFromForm();
+        if (c == null) {
+            return;
+        }
 
-                customerDAO.save(customer); // Lưu vào DB
-
-                JOptionPane.showMessageDialog(this, "Thêm khách hàng thành công!");
-                loadDataToTable(); // Tải lại dữ liệu
-                clearForm(); // Xóa trắng form
-            } catch (Exception e) {
-                JOptionPane.showMessageDialog(this, "Lỗi khi thêm khách hàng: " + e.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
-            }
+        try {
+            c.setCustomerId(UUID.randomUUID());
+            c.setCreatedAt(Instant.now());
+            customerDAO.save(c);
+            JOptionPane.showMessageDialog(this, "✅ Thêm khách hàng thành công!");
+            loadDataToTable();
+            clearForm();
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Lỗi thêm khách hàng: " + e.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
         }
     }
 
     private void updateCustomer() {
         if (selectedCustomerId == null) {
-            JOptionPane.showMessageDialog(this, "Vui lòng chọn một khách hàng để cập nhật!", "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Vui lòng chọn khách hàng cần cập nhật!");
             return;
         }
 
-        Customer customer = getModelFromForm();
-        if (customer != null) {
-            try {
-                customer.setCustomerId(selectedCustomerId); // Gán ID của khách hàng đang được chọn
-                // Lấy lại ngày tạo cũ để không bị ghi đè
-                Customer oldCustomer = customerDAO.findById(selectedCustomerId);
-                if (oldCustomer != null) {
-                    customer.setCreatedAt(oldCustomer.getCreatedAt()); // ✅ giữ Instant
-                } else {
-                    customer.setCreatedAt(Instant.now()); // ✅ Instant
-                }
+        Customer c = getModelFromForm();
+        if (c == null) {
+            return;
+        }
 
-                customerDAO.save(customer); // Phương thức save() cũng dùng để cập nhật
-
-                JOptionPane.showMessageDialog(this, "Cập nhật thành công!");
-                loadDataToTable();
-                clearForm();
-            } catch (Exception e) {
-                JOptionPane.showMessageDialog(this, "Lỗi khi cập nhật: " + e.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
-            }
+        try {
+            c.setCustomerId(selectedCustomerId);
+            Customer old = customerDAO.findById(selectedCustomerId);
+            c.setCreatedAt(old != null ? old.getCreatedAt() : Instant.now());
+            customerDAO.save(c);
+            JOptionPane.showMessageDialog(this, "✅ Cập nhật thành công!");
+            loadDataToTable();
+            clearForm();
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Lỗi cập nhật: " + e.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
         }
     }
 
     private void deleteCustomer() {
         if (selectedCustomerId == null) {
-            JOptionPane.showMessageDialog(this, "Vui lòng chọn một khách hàng để xóa!", "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Chưa chọn khách hàng để xóa!");
             return;
         }
 
-        int confirm = JOptionPane.showConfirmDialog(this,
-                "Bạn có chắc chắn muốn xóa khách hàng này không?",
-                "Xác nhận xóa",
-                JOptionPane.YES_NO_OPTION);
+        int confirm = JOptionPane.showConfirmDialog(this, "Xóa khách hàng này?", "Xác nhận", JOptionPane.YES_NO_OPTION);
+        if (confirm != JOptionPane.YES_OPTION) {
+            return;
+        }
 
-        if (confirm == JOptionPane.YES_OPTION) {
-            try {
-                Customer customerToDelete = new Customer();
-                customerToDelete.setCustomerId(selectedCustomerId); // Chỉ cần ID để xóa
-
-                customerDAO.delete(customerToDelete);
-
-                JOptionPane.showMessageDialog(this, "Xóa khách hàng thành công!");
-                loadDataToTable();
-                clearForm();
-            } catch (Exception e) {
-                JOptionPane.showMessageDialog(this, "Lỗi khi xóa: " + e.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
-            }
+        try {
+            customerDAO.delete(selectedCustomerId);
+            JOptionPane.showMessageDialog(this, "✅ Xóa thành công!");
+            loadDataToTable();
+            clearForm();
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Lỗi xóa: " + e.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
         }
     }
 

@@ -4,8 +4,6 @@
  */
 package PANELS;
 
-import DAO.DaoMapper;
-import DAO.DaoMapperBuilder;
 import DAO.ProductDAO;
 import KetNoiCSDL.KetNoICSDL;
 import MODELS.Product;
@@ -23,8 +21,8 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.table.DefaultTableModel;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.List;
 
 /**
  *
@@ -44,34 +42,27 @@ public class Laptop extends javax.swing.JPanel {
         init();
     }
 
-    private void init() {
-        // Khởi tạo Table Model
+     private void init() {
         tblModel = (DefaultTableModel) tblLaptop.getModel();
         tblModel.setColumnIdentifiers(new String[]{
             "ID", "Hãng", "Model", "CPU", "RAM (GB)", "Bộ nhớ", "Giá", "Còn hàng", "Hình ảnh", "Ngày tạo"
         });
 
-        // Khởi tạo DAO
         try {
             CqlSession session = KetNoICSDL.getSession();
-            DaoMapper daoMapper = new DaoMapperBuilder(session).build();
-            this.productDAO = daoMapper.productDAO();
-
-            // Tải dữ liệu lên bảng
+            this.productDAO = new ProductDAO(session);
             loadProductsToTable();
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Lỗi kết nối CSDL: " + e.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
             e.printStackTrace();
         }
 
-        // Thêm sự kiện cho bảng
         tblLaptop.getSelectionModel().addListSelectionListener((ListSelectionEvent event) -> {
             if (!event.getValueIsAdjusting() && tblLaptop.getSelectedRow() != -1) {
                 showDetail();
             }
         });
 
-        // Thêm sự kiện cho các button
         btnAddLP.addActionListener(e -> addProduct());
         btnEditLP.addActionListener(e -> updateProduct());
         btnDelLP.addActionListener(e -> deleteProduct());
@@ -80,10 +71,11 @@ public class Laptop extends javax.swing.JPanel {
     }
 
     private void loadProductsToTable() {
-        tblModel.setRowCount(0); // Xóa dữ liệu cũ
+        tblModel.setRowCount(0);
         try {
-            for (Product p : productDAO.findAll()) {
-                Object[] row = new Object[]{
+            List<Product> products = productDAO.findAllProducts();
+            for (Product p : products) {
+                tblModel.addRow(new Object[]{
                     p.getProductId(),
                     p.getBrand(),
                     p.getModel(),
@@ -94,8 +86,7 @@ public class Laptop extends javax.swing.JPanel {
                     p.isAvailable(),
                     p.getImage(),
                     p.getCreatedAt()
-                };
-                tblModel.addRow(row);
+                });
             }
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Lỗi khi tải dữ liệu: " + e.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
@@ -105,7 +96,6 @@ public class Laptop extends javax.swing.JPanel {
     private void showDetail() {
         int selectedRow = tblLaptop.getSelectedRow();
         if (selectedRow >= 0) {
-            // ... code lấy thông tin text field giữ nguyên
             txtHang.setText(tblModel.getValueAt(selectedRow, 1).toString());
             txtModel.setText(tblModel.getValueAt(selectedRow, 2).toString());
             txtCpu.setText(tblModel.getValueAt(selectedRow, 3).toString());
@@ -114,42 +104,32 @@ public class Laptop extends javax.swing.JPanel {
             txtGia.setText(tblModel.getValueAt(selectedRow, 6).toString());
             chkConHang.setSelected((boolean) tblModel.getValueAt(selectedRow, 7));
 
-            // ---- PHẦN HIỂN THỊ HÌNH ẢNH ĐƯỢC NÂNG CẤP ----
-            lbHinh.setText(null);
-
             Object imageValue = tblModel.getValueAt(selectedRow, 8);
-            String imageName = (imageValue != null) ? imageValue.toString() : null;
+            personalImage = (imageValue != null) ? imageValue.toString() : null;
+            updateImageLabel(personalImage);
+        }
+    }
 
-            this.personalImage = imageName;
+    private void updateImageLabel(String imageName) {
+        if (imageName == null || imageName.isEmpty()) {
+            lbHinh.setIcon(null);
+            lbHinh.setText("Không có hình");
+            return;
+        }
 
-            if (imageName != null && !imageName.isEmpty()) {
-                ImageIcon icon = null;
-                // Ưu tiên tìm trong "Bếp" (classpath) trước. Cách này nhanh và đúng chuẩn.
-                java.net.URL imageUrl = getClass().getResource("/IMAGES/" + imageName);
+        ImageIcon icon = null;
+        File file = new File("src/main/resources/IMAGES/" + imageName);
+        if (file.exists()) {
+            icon = new ImageIcon(file.getAbsolutePath());
+        }
 
-                if (imageUrl != null) {
-                    // Tìm thấy trong Bếp, dùng nó
-                    icon = new ImageIcon(imageUrl);
-                } else {
-                    // Không thấy trong Bếp => có thể là ảnh vừa mới thêm
-                    // Thử tìm trong "Kho" (src) như một giải pháp dự phòng
-                    File imageFileInSrc = new File("src/main/resources/IMAGES/" + imageName);
-                    if (imageFileInSrc.exists()) {
-                        // Tìm thấy trong Kho, dùng nó
-                        icon = new ImageIcon(imageFileInSrc.getAbsolutePath());
-                    }
-                }
-
-                if (icon != null) {
-                    Image img = icon.getImage().getScaledInstance(lbHinh.getWidth(), lbHinh.getHeight(), Image.SCALE_SMOOTH);
-                    lbHinh.setIcon(new ImageIcon(img));
-                } else {
-                    lbHinh.setIcon(null);
-                    lbHinh.setText("Ảnh không tồn tại");
-                }
-            } else {
-                lbHinh.setIcon(null);
-            }
+        if (icon != null) {
+            Image img = icon.getImage().getScaledInstance(lbHinh.getWidth(), lbHinh.getHeight(), Image.SCALE_SMOOTH);
+            lbHinh.setIcon(new ImageIcon(img));
+            lbHinh.setText(null);
+        } else {
+            lbHinh.setIcon(null);
+            lbHinh.setText("Ảnh không tồn tại");
         }
     }
 
@@ -168,91 +148,82 @@ public class Laptop extends javax.swing.JPanel {
                 return null;
             }
 
-            Product product = new Product();
-            product.setBrand(brand);
-            product.setModel(model);
-            product.setCpu(cpu);
-            product.setRam(ram);
-            product.setStorage(storage);
-            product.setPrice(price);
-            product.setAvailable(available);
-            product.setImage(personalImage); // Gán đường dẫn ảnh
-
-            return product;
-        } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(this, "RAM và Giá phải là số.", "Lỗi định dạng", JOptionPane.ERROR_MESSAGE);
+            Product p = new Product();
+            p.setBrand(brand);
+            p.setModel(model);
+            p.setCpu(cpu);
+            p.setRam(ram);
+            p.setStorage(storage);
+            p.setPrice(price);
+            p.setAvailable(available);
+            p.setImage(personalImage);
+            return p;
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Lỗi định dạng: " + e.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
             return null;
         }
     }
 
     private void addProduct() {
         Product product = getProductFromForm();
-        if (product != null) {
-            product.setProductId(UUID.randomUUID().toString());
-            // THAY ĐỔI TỪ: product.setCreatedAt(LocalDateTime.now());
-            // THÀNH:
-            product.setCreatedAt(Instant.now());
+        if (product == null) return;
 
-            try {
-                productDAO.save(product);
-                JOptionPane.showMessageDialog(this, "Thêm sản phẩm thành công!");
-                loadProductsToTable();
-                clearForm();
-            } catch (Exception e) {
-                JOptionPane.showMessageDialog(this, "Lỗi khi thêm sản phẩm: " + e.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
-            }
+        product.setProductId(UUID.randomUUID().toString());
+        product.setCreatedAt(Instant.now());
+
+        try {
+            productDAO.insertProduct(product);
+            JOptionPane.showMessageDialog(this, "Thêm sản phẩm thành công!");
+            loadProductsToTable();
+            clearForm();
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Lỗi khi thêm sản phẩm: " + e.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
         }
     }
 
     private void updateProduct() {
         int selectedRow = tblLaptop.getSelectedRow();
         if (selectedRow < 0) {
-            JOptionPane.showMessageDialog(this, "Vui lòng chọn một sản phẩm để cập nhật.", "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Chọn sản phẩm để cập nhật.");
             return;
         }
 
         Product product = getProductFromForm();
-        if (product != null) {
-            String productId = tblModel.getValueAt(selectedRow, 0).toString();
-            Instant createdAt = (Instant) tblModel.getValueAt(selectedRow, 9);
-            product.setProductId(productId);
-            product.setCreatedAt(createdAt); // Giữ nguyên ngày tạo ban đầu
+        if (product == null) return;
 
-            try {
-                productDAO.update(product);
-                JOptionPane.showMessageDialog(this, "Cập nhật sản phẩm thành công!");
-                loadProductsToTable();
-                clearForm();
-            } catch (Exception e) {
-                JOptionPane.showMessageDialog(this, "Lỗi khi cập nhật sản phẩm: " + e.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
-            }
+        String productId = tblModel.getValueAt(selectedRow, 0).toString();
+        Instant createdAt = (Instant) tblModel.getValueAt(selectedRow, 9);
+        product.setProductId(productId);
+        product.setCreatedAt(createdAt);
+
+        try {
+            productDAO.updateProduct(product);
+            JOptionPane.showMessageDialog(this, "Cập nhật thành công!");
+            loadProductsToTable();
+            clearForm();
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Lỗi khi cập nhật: " + e.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
         }
     }
 
     private void deleteProduct() {
         int selectedRow = tblLaptop.getSelectedRow();
         if (selectedRow < 0) {
-            JOptionPane.showMessageDialog(this, "Vui lòng chọn một sản phẩm để xóa.", "Thông báo", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Chọn sản phẩm để xóa.");
             return;
         }
 
-        int confirm = JOptionPane.showConfirmDialog(this, "Bạn có chắc chắn muốn xóa sản phẩm này?", "Xác nhận", JOptionPane.YES_NO_OPTION);
-        if (confirm == JOptionPane.YES_OPTION) {
-            try {
-                String productId = tblModel.getValueAt(selectedRow, 0).toString();
-                Product productToDelete = productDAO.findById(productId);
+        String productId = tblModel.getValueAt(selectedRow, 0).toString();
+        int confirm = JOptionPane.showConfirmDialog(this, "Xóa sản phẩm này?", "Xác nhận", JOptionPane.YES_NO_OPTION);
+        if (confirm != JOptionPane.YES_OPTION) return;
 
-                if (productToDelete != null) {
-                    productDAO.delete(productToDelete);
-                    JOptionPane.showMessageDialog(this, "Xóa sản phẩm thành công!");
-                    loadProductsToTable();
-                    clearForm();
-                } else {
-                    JOptionPane.showMessageDialog(this, "Không tìm thấy sản phẩm để xóa.", "Lỗi", JOptionPane.ERROR_MESSAGE);
-                }
-            } catch (Exception e) {
-                JOptionPane.showMessageDialog(this, "Lỗi khi xóa sản phẩm: " + e.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
-            }
+        try {
+            productDAO.deleteProductById(productId);
+            JOptionPane.showMessageDialog(this, "Đã xóa sản phẩm!");
+            loadProductsToTable();
+            clearForm();
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Lỗi khi xóa: " + e.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -265,46 +236,25 @@ public class Laptop extends javax.swing.JPanel {
         txtGia.setText("");
         chkConHang.setSelected(false);
         lbHinh.setIcon(null);
-        lbHinh.setText(null);
+        lbHinh.setText("Không có hình");
         personalImage = null;
         tblLaptop.clearSelection();
     }
 
     private void chooseImage() {
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setDialogTitle("Chọn hình ảnh sản phẩm");
-        fileChooser.setFileFilter(new FileNameExtensionFilter("Image Files", "jpg", "png", "gif", "jpeg"));
-
-        if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+        JFileChooser fc = new JFileChooser();
+        fc.setFileFilter(new FileNameExtensionFilter("Image Files", "jpg", "png", "jpeg", "gif"));
+        if (fc.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+            File src = fc.getSelectedFile();
+            File destDir = new File("src/main/resources/IMAGES");
+            if (!destDir.exists()) destDir.mkdirs();
+            Path destPath = destDir.toPath().resolve(src.getName());
             try {
-                // Lấy file người dùng đã chọn
-                File sourceFile = fileChooser.getSelectedFile();
-
-                // Tạo thư mục đích nếu chưa tồn tại
-                // Đường dẫn tương đối đến thư mục resources trong dự án Maven
-                File destDir = new File("src/main/resources/IMAGES");
-                if (!destDir.exists()) {
-                    destDir.mkdirs();
-                }
-
-                // Tạo đối tượng Path cho file nguồn và file đích
-                Path sourcePath = sourceFile.toPath();
-                Path destPath = new File(destDir, sourceFile.getName()).toPath();
-
-                // Sao chép file vào thư mục đích, ghi đè nếu đã tồn tại
-                Files.copy(sourcePath, destPath, StandardCopyOption.REPLACE_EXISTING);
-
-                // Lưu lại CHỈ TÊN FILE để lưu vào CSDL
-                this.personalImage = sourceFile.getName();
-
-                // Hiển thị ảnh vừa chọn lên JLabel
-                ImageIcon icon = new ImageIcon(destPath.toString());
-                Image img = icon.getImage().getScaledInstance(lbHinh.getWidth(), lbHinh.getHeight(), Image.SCALE_SMOOTH);
-                lbHinh.setIcon(new ImageIcon(img));
-
+                Files.copy(src.toPath(), destPath, StandardCopyOption.REPLACE_EXISTING);
+                personalImage = src.getName();
+                updateImageLabel(personalImage);
             } catch (Exception e) {
-                JOptionPane.showMessageDialog(this, "Lỗi khi sao chép ảnh: " + e.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
-                e.printStackTrace();
+                JOptionPane.showMessageDialog(this, "Lỗi khi sao chép ảnh: " + e.getMessage());
             }
         }
     }

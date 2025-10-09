@@ -5,29 +5,23 @@
 package PANELS;
 
 import DAO.CustomerDAO;
-import DAO.DaoMapper;
-import DAO.DaoMapperBuilder;
-import DAO.OrderService;
 import DAO.ProductDAO;
+import DAO.OrderService;
 import KetNoiCSDL.KetNoICSDL;
+import MODELS.Customer;
+import MODELS.Product;
+import MODELS.OrderItem;
 import MODELS.OrderByCustomer;
 import MODELS.OrderById;
-import MODELS.OrderItem;
 import com.datastax.oss.driver.api.core.CqlSession;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.util.UUID;
 import java.math.BigDecimal;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import javax.swing.JOptionPane;
-import javax.swing.SwingWorker;
+import java.util.*;
+import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
-
 /**
  *
  * @author HAO
@@ -39,11 +33,19 @@ public class DonHang extends javax.swing.JPanel {
      * Creates new form DonHang
      */
     private final Map<String, UUID> customerMap = new HashMap<>();
+    private final Map<String, Product> productMap = new HashMap<>();
     private final CqlSession session;
+    private final CustomerDAO customerDAO;
+    private final ProductDAO productDAO;
+    private final OrderService orderService;
 
     public DonHang() {
         initComponents();
-        this.session = KetNoICSDL.getSession(); 
+        this.session = KetNoICSDL.getSession();
+        this.customerDAO = new CustomerDAO(session);
+        this.productDAO = new ProductDAO(session);
+        this.orderService = new OrderService(session);
+        
         setupTables();
         loadCustomers();
         loadProducts();
@@ -71,79 +73,116 @@ public class DonHang extends javax.swing.JPanel {
             }
         });
     }
-     // ======================== SETUP ============================
+
+    // ======================== SETUP ============================
     private void setupTables() {
+        // Bảng danh sách sản phẩm trong đơn hàng
         tblDanhSachSanPham.setModel(new DefaultTableModel(
                 new Object[][]{},
                 new String[]{"Tên sản phẩm", "Số lượng", "Đơn giá", "Thành tiền"}
         ) {
             @Override
             public boolean isCellEditable(int row, int col) {
-                return col == 1;
+                return col == 1; // Chỉ cho phép sửa số lượng
             }
         });
 
+        // Bảng danh sách laptop có sẵn
         tblLaptop.setModel(new DefaultTableModel(
                 new Object[][]{},
                 new String[]{"Mã SP", "Model", "Giá"}
-        ));
+        ) {
+            @Override
+            public boolean isCellEditable(int row, int col) {
+                return false;
+            }
+        });
+
+        // Bảng danh sách đơn hàng
+        tblDonHang.setModel(new DefaultTableModel(
+                new Object[][]{},
+                new String[]{"Mã đơn hàng", "Khách hàng", "Ngày đặt", "Tổng tiền", "Trạng thái"}
+        ) {
+            @Override
+            public boolean isCellEditable(int row, int col) {
+                return false;
+            }
+        });
     }
 
     // ======================== LOAD DATA ============================
     private void loadCustomers() {
         try {
-            DaoMapper mapper = new DaoMapperBuilder(session).build();
-            CustomerDAO customerDAO = mapper.customerDAO();
-
             customerMap.clear();
             cboTenKH.removeAllItems();
 
-            customerDAO.findAllWithFiltering().forEach(c -> {
+            List<Customer> customers = customerDAO.findAll();
+            for (Customer c : customers) {
                 String name = c.getFullName() != null ? c.getFullName() : "(Không tên)";
                 cboTenKH.addItem(name);
                 customerMap.put(name, c.getCustomerId());
-            });
+            }
+            
+            if (cboTenKH.getItemCount() > 0) {
+                cboTenKH.setSelectedIndex(-1);
+            }
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Lỗi tải khách hàng: " + e.getMessage());
+            JOptionPane.showMessageDialog(this, "❌ Lỗi tải khách hàng: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
     private void loadProducts() {
         try {
-            DaoMapper mapper = new DaoMapperBuilder(session).build();
-            ProductDAO productDAO = mapper.productDAO();
-
+            productMap.clear();
             DefaultTableModel model = (DefaultTableModel) tblLaptop.getModel();
             model.setRowCount(0);
 
-            productDAO.findAll().forEach(p ->
-                model.addRow(new Object[]{p.getProductId(), p.getModel(), p.getPrice()})
-            );
+            List<Product> products = productDAO.findAllProducts();
+            for (Product p : products) {
+                if (p.isAvailable()) { // Chỉ hiển thị sản phẩm còn hàng
+                    model.addRow(new Object[]{
+                        p.getProductId(),
+                        p.getModel(),
+                        p.getPrice()
+                    });
+                    productMap.put(p.getProductId(), p);
+                }
+            }
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Lỗi tải sản phẩm: " + e.getMessage());
+            JOptionPane.showMessageDialog(this, "❌ Lỗi tải sản phẩm: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
     private void loadOrders() {
-        DefaultTableModel model = new DefaultTableModel(
-                new Object[]{"Mã đơn hàng", "Khách hàng", "Ngày đặt", "Tổng tiền", "Trạng thái"}, 0
-        );
-        tblDonHang.setModel(model);
+        DefaultTableModel model = (DefaultTableModel) tblDonHang.getModel();
+        model.setRowCount(0);
 
         SwingWorker<Void, Object[]> worker = new SwingWorker<>() {
             @Override
             protected Void doInBackground() {
                 try {
-                    OrderService service = new OrderService(session);
+                    DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")
+                            .withZone(ZoneId.systemDefault());
+
                     for (Map.Entry<String, UUID> entry : customerMap.entrySet()) {
-                        List<OrderByCustomer> orders = service.getOrdersByCustomer(entry.getValue());
+                        List<OrderByCustomer> orders = orderService.getOrdersByCustomer(entry.getValue());
                         for (OrderByCustomer o : orders) {
                             publish(new Object[]{
-                                    o.getOrderId(), entry.getKey(), o.getOrderDate(), o.getTotal(), o.getStatus()
+                                o.getOrderId(),
+                                entry.getKey(),
+                                fmt.format(o.getOrderDate()),
+                                String.format("%,.0f đ", o.getTotal()),
+                                o.getStatus()
                             });
                         }
                     }
                 } catch (Exception ex) {
+                    SwingUtilities.invokeLater(() -> 
+                        JOptionPane.showMessageDialog(DonHang.this, 
+                            "❌ Lỗi tải đơn hàng: " + ex.getMessage())
+                    );
                     ex.printStackTrace();
                 }
                 return null;
@@ -155,6 +194,11 @@ public class DonHang extends javax.swing.JPanel {
                     model.addRow(row);
                 }
             }
+
+            @Override
+            protected void done() {
+                System.out.println("✅ Đã tải " + model.getRowCount() + " đơn hàng");
+            }
         };
         worker.execute();
     }
@@ -163,78 +207,93 @@ public class DonHang extends javax.swing.JPanel {
     private void handleAddOrder() {
         String customerName = (String) cboTenKH.getSelectedItem();
         if (customerName == null || !customerMap.containsKey(customerName)) {
-            JOptionPane.showMessageDialog(this, "Vui lòng chọn khách hàng!");
+            JOptionPane.showMessageDialog(this, "⚠️ Vui lòng chọn khách hàng!");
             return;
         }
 
         UUID customerId = customerMap.get(customerName);
         List<OrderItem> items = collectOrderItems();
         if (items.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Chưa có sản phẩm trong đơn hàng!");
+            JOptionPane.showMessageDialog(this, "⚠️ Chưa có sản phẩm trong đơn hàng!");
             return;
         }
 
         try {
-            OrderService service = new OrderService(session);
-            service.createOrder(customerId, items);
+            orderService.createOrder(customerId, items);
             JOptionPane.showMessageDialog(this, "✅ Thêm đơn hàng thành công!");
             clearOrderForm();
             loadOrders();
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "❌ Lỗi thêm đơn hàng: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
     private void handleEditOrder() {
         int row = tblDonHang.getSelectedRow();
         if (row == -1) {
-            JOptionPane.showMessageDialog(this, "Vui lòng chọn đơn hàng cần sửa!");
+            JOptionPane.showMessageDialog(this, "⚠️ Vui lòng chọn đơn hàng cần sửa!");
             return;
         }
 
-        UUID orderId = UUID.fromString(tblDonHang.getValueAt(row, 0).toString());
+        UUID orderId = (UUID) tblDonHang.getValueAt(row, 0);
         String customerName = tblDonHang.getValueAt(row, 1).toString();
         UUID customerId = customerMap.get(customerName);
 
         List<OrderItem> newItems = collectOrderItems();
         if (newItems.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Đơn hàng phải có ít nhất 1 sản phẩm!");
+            JOptionPane.showMessageDialog(this, "⚠️ Đơn hàng phải có ít nhất 1 sản phẩm!");
             return;
         }
 
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "Cập nhật đơn hàng sẽ xóa đơn cũ và tạo đơn mới. Bạn có chắc chắn?",
+                "Xác nhận cập nhật",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE);
+        
+        if (confirm != JOptionPane.YES_OPTION) return;
+
         try {
-            OrderService service = new OrderService(session);
-            service.deleteOrder(orderId, customerId);
-            service.createOrder(customerId, newItems);
+            // Xóa đơn hàng cũ
+            orderService.deleteOrder(orderId);
+            // Tạo đơn hàng mới với các item đã sửa
+            orderService.createOrder(customerId, newItems);
+            
             JOptionPane.showMessageDialog(this, "✅ Cập nhật đơn hàng thành công!");
+            clearOrderForm();
             loadOrders();
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "❌ Lỗi cập nhật đơn hàng: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
     private void handleDeleteOrder() {
         int row = tblDonHang.getSelectedRow();
         if (row == -1) {
-            JOptionPane.showMessageDialog(this, "Vui lòng chọn đơn hàng cần xóa!");
+            JOptionPane.showMessageDialog(this, "⚠️ Vui lòng chọn đơn hàng cần xóa!");
             return;
         }
 
-        UUID orderId = UUID.fromString(tblDonHang.getValueAt(row, 0).toString());
-        String customerName = tblDonHang.getValueAt(row, 1).toString();
-        UUID customerId = customerMap.get(customerName);
+        UUID orderId = (UUID) tblDonHang.getValueAt(row, 0);
 
         int confirm = JOptionPane.showConfirmDialog(this,
-                "Bạn có chắc chắn muốn xóa đơn hàng này?", "Xác nhận", JOptionPane.YES_NO_OPTION);
+                "Bạn có chắc chắn muốn xóa đơn hàng này?\nThao tác này không thể hoàn tác!",
+                "Xác nhận xóa",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE);
+        
         if (confirm != JOptionPane.YES_OPTION) return;
 
         try {
-            OrderService service = new OrderService(session);
-            service.deleteOrder(orderId, customerId);
+            orderService.deleteOrder(orderId);
             JOptionPane.showMessageDialog(this, "🗑️ Xóa đơn hàng thành công!");
+            clearOrderForm();
             loadOrders();
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "❌ Lỗi khi xóa đơn hàng: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -243,23 +302,27 @@ public class DonHang extends javax.swing.JPanel {
         int row = tblDonHang.getSelectedRow();
         if (row == -1) return;
 
-        UUID orderId = UUID.fromString(tblDonHang.getValueAt(row, 0).toString());
+        UUID orderId = (UUID) tblDonHang.getValueAt(row, 0);
         String customerName = tblDonHang.getValueAt(row, 1).toString();
+        
         cboTenKH.setSelectedItem(customerName);
         txtNgayDat.setText("Đang tải...");
 
         SwingWorker<OrderById, Void> worker = new SwingWorker<>() {
             @Override
             protected OrderById doInBackground() throws Exception {
-                OrderService service = new OrderService(session);
-                return service.getOrderById(orderId);
+                return orderService.getOrderById(orderId);
             }
 
             @Override
             protected void done() {
                 try {
                     OrderById order = get();
-                    if (order == null) return;
+                    if (order == null) {
+                        txtNgayDat.setText("");
+                        JOptionPane.showMessageDialog(DonHang.this, "⚠️ Không tìm thấy chi tiết đơn hàng!");
+                        return;
+                    }
 
                     DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss")
                             .withZone(ZoneId.systemDefault());
@@ -267,12 +330,20 @@ public class DonHang extends javax.swing.JPanel {
 
                     DefaultTableModel model = (DefaultTableModel) tblDanhSachSanPham.getModel();
                     model.setRowCount(0);
+                    
                     for (OrderItem item : order.getItems()) {
                         BigDecimal total = item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
-                        model.addRow(new Object[]{item.getModel(), item.getQuantity(), item.getPrice(), total});
+                        model.addRow(new Object[]{
+                            item.getModel(),
+                            item.getQuantity(),
+                            String.format("%,.0f đ", item.getPrice()),
+                            String.format("%,.0f đ", total)
+                        });
                     }
                 } catch (Exception e) {
-                    JOptionPane.showMessageDialog(DonHang.this, "Lỗi hiển thị chi tiết: " + e.getMessage());
+                    txtNgayDat.setText("");
+                    JOptionPane.showMessageDialog(DonHang.this, "❌ Lỗi hiển thị chi tiết: " + e.getMessage());
+                    e.printStackTrace();
                 }
             }
         };
@@ -283,13 +354,32 @@ public class DonHang extends javax.swing.JPanel {
     private List<OrderItem> collectOrderItems() {
         List<OrderItem> list = new ArrayList<>();
         DefaultTableModel model = (DefaultTableModel) tblDanhSachSanPham.getModel();
+        
         for (int i = 0; i < model.getRowCount(); i++) {
-            String name = model.getValueAt(i, 0).toString();
+            String modelName = model.getValueAt(i, 0).toString();
             int qty = Integer.parseInt(model.getValueAt(i, 1).toString());
-            BigDecimal price = new BigDecimal(model.getValueAt(i, 2).toString());
-            list.add(new OrderItem(UUID.randomUUID().toString(), name, qty, price));
+            
+            // Lấy giá từ chuỗi đã format (loại bỏ " đ" và dấu phẩy)
+            String priceStr = model.getValueAt(i, 2).toString()
+                    .replace(" đ", "")
+                    .replace(",", "");
+            BigDecimal price = new BigDecimal(priceStr);
+            
+            // Tìm product_id từ model name
+            String productId = findProductIdByModel(modelName);
+            
+            list.add(new OrderItem(productId, modelName, qty, price));
         }
         return list;
+    }
+
+    private String findProductIdByModel(String modelName) {
+        for (Product p : productMap.values()) {
+            if (p.getModel().equals(modelName)) {
+                return p.getProductId();
+            }
+        }
+        return UUID.randomUUID().toString(); // Fallback
     }
 
     private void addProductToOrder() {
@@ -299,30 +389,46 @@ public class DonHang extends javax.swing.JPanel {
         DefaultTableModel src = (DefaultTableModel) tblLaptop.getModel();
         DefaultTableModel dest = (DefaultTableModel) tblDanhSachSanPham.getModel();
 
+        String productId = src.getValueAt(row, 0).toString();
         String model = src.getValueAt(row, 1).toString();
-        BigDecimal price = new BigDecimal(src.getValueAt(row, 2).toString());
+        BigDecimal price = (BigDecimal) src.getValueAt(row, 2);
 
+        // Kiểm tra xem sản phẩm đã có trong giỏ chưa
         for (int i = 0; i < dest.getRowCount(); i++) {
             if (dest.getValueAt(i, 0).equals(model)) {
+                // Tăng số lượng
                 int qty = Integer.parseInt(dest.getValueAt(i, 1).toString()) + 1;
                 dest.setValueAt(qty, i, 1);
-                dest.setValueAt(price.multiply(BigDecimal.valueOf(qty)), i, 3);
+                
+                BigDecimal total = price.multiply(BigDecimal.valueOf(qty));
+                dest.setValueAt(String.format("%,.0f đ", total), i, 3);
                 return;
             }
         }
-        dest.addRow(new Object[]{model, 1, price, price});
+        
+        // Thêm sản phẩm mới
+        dest.addRow(new Object[]{
+            model,
+            1,
+            String.format("%,.0f đ", price),
+            String.format("%,.0f đ", price)
+        });
     }
 
     private void clearOrderForm() {
         ((DefaultTableModel) tblDanhSachSanPham.getModel()).setRowCount(0);
         txtNgayDat.setText("");
-        cboTenKH.setSelectedIndex(-1);
+        if (cboTenKH.getItemCount() > 0) {
+            cboTenKH.setSelectedIndex(-1);
+        }
     }
 
     private void removeSelectedProduct() {
         int row = tblDanhSachSanPham.getSelectedRow();
         if (row != -1) {
             ((DefaultTableModel) tblDanhSachSanPham.getModel()).removeRow(row);
+        } else {
+            JOptionPane.showMessageDialog(this, "⚠️ Vui lòng chọn sản phẩm cần xóa!");
         }
     }
     /**
@@ -513,18 +619,11 @@ public class DonHang extends javax.swing.JPanel {
     }// </editor-fold>//GEN-END:initComponents
 
     private void btnLamMoiActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLamMoiActionPerformed
-        ((DefaultTableModel) tblDanhSachSanPham.getModel()).setRowCount(0);
+        loadOrders();
     }//GEN-LAST:event_btnLamMoiActionPerformed
 
     private void btnXoaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnXoaActionPerformed
-        int selectedRow = tblDanhSachSanPham.getSelectedRow();
-        if (selectedRow == -1) {
-            JOptionPane.showMessageDialog(this, "Vui lòng chọn sản phẩm cần xóa!");
-            return;
-        }
-
-        DefaultTableModel model = (DefaultTableModel) tblDanhSachSanPham.getModel();
-        model.removeRow(selectedRow);
+        removeSelectedProduct();
     }//GEN-LAST:event_btnXoaActionPerformed
 
 

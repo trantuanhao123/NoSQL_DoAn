@@ -11,7 +11,6 @@ import GUI.frm_Main;
  * @author HAO
  */
 public class QLKHTT {
-
     public static void main(String[] args) {
         frm_Main abc = new frm_Main();
         abc.setVisible(true);
