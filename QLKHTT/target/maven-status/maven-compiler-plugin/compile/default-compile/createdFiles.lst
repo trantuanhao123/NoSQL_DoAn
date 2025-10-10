@@ -8,6 +8,7 @@ PANELS\ChartUtils.class
 PANELS\KhachHang$2.class
 GUI\frm_Main$2.class
 com\mycompany\qlkhtt\QLKHTT.class
+PANELS\DonHang$9.class
 MODELS\OrderByCustomer.class
 GUI\frm_Main.class
 PANELS\TrangChu.class
@@ -22,7 +23,6 @@ GUI\frm_Main$8.class
 DAO\OrderByIdDAO.class
 PANELS\ThongKe.class
 PANELS\KhachHangVip$2.class
-Main\Main.class
 PANELS\DonHang$5.class
 PANELS\DonHang.class
 PANELS\DonHang$7.class
@@ -43,6 +43,7 @@ PANELS\KhachHang$3.class
 GUI\frm_Main$7.class
 PANELS\DonHang$3.class
 PANELS\Laptop$1.class
+PANELS\KhachHangVip$3.class
 PANELS\TimKiem.class
 MODELS\OrderById.class
 GUI\frm_Main$3.class
