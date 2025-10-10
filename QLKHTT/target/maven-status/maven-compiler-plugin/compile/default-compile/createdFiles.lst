@@ -27,6 +27,7 @@ PANELS\DonHang$5.class
 PANELS\DonHang.class
 PANELS\DonHang$7.class
 MODELS\Customer.class
+PANELS\TimKiem$1.class
 DAO\LoyaltyAccountDAO.class
 DAO\ProductDAO.class
 DAO\ThongKeService.class
@@ -46,5 +47,6 @@ PANELS\TimKiem.class
 MODELS\OrderById.class
 GUI\frm_Main$3.class
 PANELS\ThongKe$1.class
+DAO\TimKiemService.class
 KetNoiCSDL\KetNoICSDL.class
 DAO\OrderService.class

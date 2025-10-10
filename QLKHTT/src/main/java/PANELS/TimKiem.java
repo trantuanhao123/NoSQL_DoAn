@@ -4,17 +4,31 @@
  */
 package PANELS;
 
-/**
- *
- * @author HAO
- */
+import DAO.TimKiemService;
+import java.awt.event.ActionEvent;
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import javax.swing.table.DefaultTableModel;
+
 public class TimKiem extends javax.swing.JPanel {
+
+    private TimKiemService service = new TimKiemService();
 
     /**
      * Creates new form TimKiem
      */
     public TimKiem() {
         initComponents();
+        txtKey.setPreferredSize(new java.awt.Dimension(200, 22));
+    txtKey.setToolTipText("Nhập: email, số điện thoại, ID, hoặc định dạng customer_id,yyyy_mm cho đơn hàng, customer_id,points_delta,spent_delta cho cập nhật điểm");
+    txtKey.setText(""); // Clear any default text
+    btnSearch.setText("Tìm Kiếm"); // Ensure correct text
+    lblStatus.setText("");
+    tblResults.setModel(new DefaultTableModel(new Object[][]{}, new String[]{})); // Reset table
     }
 
     /**
@@ -26,19 +40,272 @@ public class TimKiem extends javax.swing.JPanel {
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
+        jLabel1 = new javax.swing.JLabel();
+        cmbSearchType = new javax.swing.JComboBox<>();
+        btnSearch = new javax.swing.JButton();
+        txtKey = new javax.swing.JTextField();
+        jLabel2 = new javax.swing.JLabel();
+        jScrollPane1 = new javax.swing.JScrollPane();
+        tblResults = new javax.swing.JTable();
+        lblStatus = new javax.swing.JLabel();
+
+        jLabel1.setText("Từ Khóa Tìm Kiếm");
+
+        cmbSearchType.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Tìm Khách Hàng Theo Email", "Tìm Khách Hàng Theo Số Điện Thoại", "Tìm Khách Hàng Theo ID", "Tìm Sản Phẩm Theo ID", "Liệt Kê Sản Phẩm Còn Hàng Theo Thương Hiệu", "Lịch Sử Đơn Hàng Theo Khách Hàng và Tháng", "Tìm Đơn Hàng Theo ID", "Thông Tin Điểm Tích Lũy Theo ID Khách Hàng", "Cập Nhật Điểm Tích Lũy" }));
+
+        btnSearch.setText("Tim Kiem");
+        btnSearch.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnSearchActionPerformed(evt);
+            }
+        });
+
+        txtKey.setToolTipText("Nhập: email, số điện thoại, ID, hoặc định dạng customer_id,yyyy_mm cho đơn hàng, customer_id,points_delta,spent_delta cho cập nhật điểm");
+        txtKey.setPreferredSize(new java.awt.Dimension(200, 22));
+
+        jLabel2.setText("Loại Search");
+
+        tblResults.setModel(new javax.swing.table.DefaultTableModel(
+            new Object [][] {
+
+            },
+            new String [] {
+
+            }
+        ));
+        jScrollPane1.setViewportView(tblResults);
+
+        lblStatus.setText(" ");
+
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
         this.setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 400, Short.MAX_VALUE)
+            .addGroup(layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jLabel2)
+                    .addComponent(jLabel1))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(layout.createSequentialGroup()
+                        .addComponent(txtKey, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(lblStatus))
+                    .addGroup(layout.createSequentialGroup()
+                        .addComponent(cmbSearchType, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(btnSearch))))
+            .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 479, javax.swing.GroupLayout.PREFERRED_SIZE)
         );
+
+        layout.linkSize(javax.swing.SwingConstants.HORIZONTAL, new java.awt.Component[] {cmbSearchType, txtKey});
+
+        layout.linkSize(javax.swing.SwingConstants.HORIZONTAL, new java.awt.Component[] {btnSearch, lblStatus});
+
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 300, Short.MAX_VALUE)
+            .addGroup(layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(cmbSearchType, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(btnSearch)
+                    .addComponent(jLabel2))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(txtKey, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jLabel1)
+                    .addComponent(lblStatus))
+                .addGap(18, 18, 18)
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 267, Short.MAX_VALUE))
         );
     }// </editor-fold>//GEN-END:initComponents
 
+    private void btnSearchActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSearchActionPerformed
+        String key = txtKey.getText().trim();
+        if (key.isEmpty()) {
+            lblStatus.setText("Vui lòng nhập từ khóa tìm kiếm.");
+            return;
+        }
+        String type = (String) cmbSearchType.getSelectedItem();
+        DefaultTableModel model = new DefaultTableModel();
+        tblResults.setModel(model);
+        List<Map<String, Object>> results = new ArrayList<>();
+        Map<String, Object> singleResult = new HashMap<>();
+
+        try {
+            switch (type) {
+                case "Tìm Khách Hàng Theo Email":
+                    results = service.findCustomersByEmailOrPhone(key, null);
+                    setCustomerColumns(model);
+                    populateCustomerTable(model, results);
+                    break;
+                case "Tìm Khách Hàng Theo Số Điện Thoại":
+                    results = service.findCustomersByEmailOrPhone(null, key);
+                    setCustomerColumns(model);
+                    populateCustomerTable(model, results);
+                    break;
+                case "Tìm Khách Hàng Theo ID":
+                    UUID custId = UUID.fromString(key);
+                    singleResult = service.getCustomerDetails(custId);
+                    setCustomerColumns(model);
+                    if (!singleResult.isEmpty()) {
+                        addCustomerRow(model, singleResult);
+                    }
+                    break;
+                case "Tìm Sản Phẩm Theo ID":
+                    singleResult = service.findProductById(key);
+                    setProductColumns(model);
+                    if (!singleResult.isEmpty()) {
+                        addProductRow(model, singleResult);
+                    }
+                    break;
+                case "Liệt Kê Sản Phẩm Còn Hàng Theo Thương Hiệu":
+                    results = service.listAvailableProductsByBrand(key);
+                    setProductColumns(model);
+                    populateProductTable(model, results);
+                    break;
+                case "Lịch Sử Đơn Hàng Theo Khách Hàng và Tháng":
+                    String[] parts = key.split(",");
+                    if (parts.length != 2) {
+                        throw new IllegalArgumentException("Định dạng: customer_id,yyyy_mm");
+                    }
+                    UUID orderCustId = UUID.fromString(parts[0].trim());
+                    String yyyyMm = parts[1].trim();
+                    results = service.getCustomerOrderHistory(orderCustId, yyyyMm);
+                    setOrderColumns(model);
+                    populateOrderTable(model, results);
+                    break;
+                case "Tìm Đơn Hàng Theo ID":
+                    UUID orderId = UUID.fromString(key);
+                    singleResult = service.getOrderById(orderId);
+                    setOrderColumns(model);
+                    if (!singleResult.isEmpty()) {
+                        addOrderRow(model, singleResult);
+                    }
+                    break;
+                case "Thông Tin Điểm Tích Lũy Theo ID Khách Hàng":
+                    UUID loyaltyId = UUID.fromString(key);
+                    singleResult = service.getCustomerLoyalty(loyaltyId);
+                    setLoyaltyColumns(model);
+                    if (!singleResult.isEmpty()) {
+                        addLoyaltyRow(model, singleResult);
+                    }
+                    break;
+                case "Cập Nhật Điểm Tích Lũy":
+                    String[] updateParts = key.split(",");
+                    if (updateParts.length != 3) {
+                        throw new IllegalArgumentException("Định dạng: customer_id,points_delta,spent_delta");
+                    }
+                    UUID updateId = UUID.fromString(updateParts[0].trim());
+                    long pointsDelta = Long.parseLong(updateParts[1].trim());
+                    BigDecimal spentDelta = new BigDecimal(updateParts[2].trim());
+                    boolean success = service.updateCustomerLoyalty(updateId, pointsDelta, spentDelta);
+                    lblStatus.setText(success ? "Cập nhật điểm tích lũy thành công." : "Cập nhật điểm tích lũy thất bại.");
+                    return;
+                default:
+                    lblStatus.setText("Loại tìm kiếm không hợp lệ.");
+                    return;
+            }
+
+            int count = results.size() > 0 ? results.size() : (singleResult.isEmpty() ? 0 : 1);
+            lblStatus.setText(count > 0 ? "Tìm thấy " + count + " kết quả." : "Không tìm thấy kết quả.");
+        } catch (Exception ex) {
+            lblStatus.setText("Lỗi: " + ex.getMessage());
+            ex.printStackTrace();
+        }
+    }//GEN-LAST:event_btnSearchActionPerformed
+
+    private void setCustomerColumns(DefaultTableModel model) {
+        model.setColumnIdentifiers(new Object[]{"ID Khách Hàng", "Họ Tên", "Email", "Số Điện Thoại", "Ngày Sinh", "Giới Tính", "Địa Chỉ", "Ngày Tạo", "Trạng Thái"});
+    }
+
+    private void setProductColumns(DefaultTableModel model) {
+        model.setColumnIdentifiers(new Object[]{"ID Sản Phẩm", "Thương Hiệu", "Mẫu", "CPU", "RAM", "Bộ Nhớ", "Giá", "Có Sẵn", "Ngày Tạo"});
+    }
+
+    private void setOrderColumns(DefaultTableModel model) {
+        model.setColumnIdentifiers(new Object[]{"ID Đơn Hàng", "ID Khách Hàng", "Ngày Đặt", "Tổng Tiền", "Mặt Hàng", "Trạng Thái"});
+    }
+
+    private void setLoyaltyColumns(DefaultTableModel model) {
+        model.setColumnIdentifiers(new Object[]{"Điểm Tích Lũy", "Cấp Bậc", "Tổng Chi Tiêu", "Số Đơn Hàng"});
+    }
+
+    private void populateCustomerTable(DefaultTableModel model, List<Map<String, Object>> results) {
+        for (Map<String, Object> row : results) {
+            addCustomerRow(model, row);
+        }
+    }
+
+    private void addCustomerRow(DefaultTableModel model, Map<String, Object> row) {
+        model.addRow(new Object[]{
+            row.get("customer_id"),
+            row.get("full_name"),
+            row.get("email"),
+            row.get("phone"),
+            row.get("dob"),
+            row.get("gender"),
+            row.get("address"),
+            row.get("created_at"),
+            row.get("status")
+        });
+    }
+
+    private void populateProductTable(DefaultTableModel model, List<Map<String, Object>> results) {
+        for (Map<String, Object> row : results) {
+            addProductRow(model, row);
+        }
+    }
+
+    private void addProductRow(DefaultTableModel model, Map<String, Object> row) {
+        model.addRow(new Object[]{
+            row.get("product_id"),
+            row.get("brand"),
+            row.get("model"),
+            row.get("cpu"),
+            row.get("ram"),
+            row.get("storage"),
+            row.get("price"),
+            row.get("available"),
+            row.get("created_at")
+        });
+    }
+
+    private void populateOrderTable(DefaultTableModel model, List<Map<String, Object>> results) {
+        for (Map<String, Object> row : results) {
+            addOrderRow(model, row);
+        }
+    }
+
+    private void addOrderRow(DefaultTableModel model, Map<String, Object> row) {
+        model.addRow(new Object[]{
+            row.get("order_id"),
+            row.get("customer_id"),
+            row.get("order_date"),
+            row.get("total"),
+            row.get("items"),
+            row.get("status")
+        });
+    }
+
+    private void addLoyaltyRow(DefaultTableModel model, Map<String, Object> row) {
+        model.addRow(new Object[]{
+            row.get("points"),
+            row.get("tier"),
+            row.get("lifetime_spent"),
+            row.get("order_count")
+        });
+    }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JButton btnSearch;
+    private javax.swing.JComboBox<String> cmbSearchType;
+    private javax.swing.JLabel jLabel1;
+    private javax.swing.JLabel jLabel2;
+    private javax.swing.JScrollPane jScrollPane1;
+    private javax.swing.JLabel lblStatus;
+    private javax.swing.JTable tblResults;
+    private javax.swing.JTextField txtKey;
     // End of variables declaration//GEN-END:variables
 }
