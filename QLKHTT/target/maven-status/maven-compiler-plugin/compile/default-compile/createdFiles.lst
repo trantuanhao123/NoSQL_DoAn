@@ -36,6 +36,7 @@ PANELS\KhachHangVip.class
 GUI\frm_Main$1.class
 PANELS\Laptop.class
 DAO\ChartUtils.class
+PANELS\KhachHang$4.class
 DAO\OrderByCustomerDAO.class
 GUI\frm_Main$4.class
 PANELS\DonHang$1.class
