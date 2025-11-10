@@ -1,6 +1,7 @@
 DAO\CustomerDAO.class
 PANELS\DonHang$2.class
 PANELS\Laptop$2.class
+PANELS\DonHang$10.class
 MODELS\OrderItem.class
 GUI\frm_Main$6.class
 MODELS\Product.class

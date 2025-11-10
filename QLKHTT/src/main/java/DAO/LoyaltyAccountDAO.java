@@ -9,9 +9,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.*;
 
-/**
- * DAO thuần Cassandra cho bảng loyalty_accounts.
- */
+
 public class LoyaltyAccountDAO {
 
     private final CqlSession session;

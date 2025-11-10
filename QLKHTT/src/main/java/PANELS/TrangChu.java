@@ -26,9 +26,7 @@ public class TrangChu extends javax.swing.JPanel {
         this.setMaximumSize(new Dimension(1500, 700));
         // Load anh goc va scale dung 500x500
         originalIcon = new ImageIcon(getClass().getResource("/HinhNen.png"));
-        Image img = originalIcon.getImage();
-        Image scaled = img.getScaledInstance(1500, 700, Image.SCALE_SMOOTH);
-        jLabel1.setIcon(new ImageIcon(scaled));
+        jLabel1.setIcon(originalIcon);
     }
     /**
      * This method is called from within the constructor to initialize the form.
@@ -47,17 +45,11 @@ public class TrangChu extends javax.swing.JPanel {
         this.setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(layout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(jLabel1)
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+            .addComponent(jLabel1, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, 1548, Short.MAX_VALUE)
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(layout.createSequentialGroup()
-                .addGap(0, 0, 0)
-                .addComponent(jLabel1)
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+            .addComponent(jLabel1, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, 1030, Short.MAX_VALUE)
         );
     }// </editor-fold>//GEN-END:initComponents
 
