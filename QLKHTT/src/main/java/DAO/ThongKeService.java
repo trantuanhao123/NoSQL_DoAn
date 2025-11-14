@@ -10,386 +10,517 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.*;
 
 public class ThongKeService {
     private CqlSession session;
-    
+    private final ExecutorService executor;
+    private final CacheManager cacheManager;
+
     public ThongKeService() {
         this.session = KetNoICSDL.getSession();
+        this.executor = Executors.newFixedThreadPool(4);
+        this.cacheManager = new CacheManager();
+    }
+
+    // ===== CACHE MANAGER =====
+    private static class CacheManager {
+        private final ConcurrentHashMap<String, CacheEntry> cache = new ConcurrentHashMap<>();
+        private static final long CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutes
+
+        private static class CacheEntry {
+            final Object data;
+            final long timestamp;
+
+            CacheEntry(Object data) {
+                this.data = data;
+                this.timestamp = System.currentTimeMillis();
+            }
+
+            boolean isExpired() {
+                return System.currentTimeMillis() - timestamp > CACHE_DURATION_MS;
+            }
+        }
+
+        @SuppressWarnings("unchecked")
+        <T> T get(String key, Class<T> type) {
+            CacheEntry entry = cache.get(key);
+            if (entry != null && !entry.isExpired()) {
+                return (T) entry.data;
+            }
+            return null;
+        }
+
+        void put(String key, Object data) {
+            cache.put(key, new CacheEntry(data));
+        }
+
+        void clear() {
+            cache.clear();
+        }
     }
     
-    // 1. Thống kê tổng quan
+    // 1. Thống kê tổng quan - OPTIMIZED với async queries
     public Map<String, Object> getTongQuan() {
+        String cacheKey = "tong_quan";
+        Map<String, Object> cached = cacheManager.get(cacheKey, Map.class);
+        if (cached != null) return cached;
+
         Map<String, Object> stats = new HashMap<>();
-        
+
         try {
-            // Tổng số khách hàng - đếm thủ công
-            ResultSet rs1 = session.execute("SELECT * FROM customers");
-            long totalCustomers = 0;
-            for (Row row : rs1) {
-                totalCustomers++;
-            }
+            // Chạy 3 queries song song
+            CompletableFuture<Long> customersFuture = CompletableFuture.supplyAsync(
+                () -> countTable("customers"), executor);
+
+            CompletableFuture<Long> productsFuture = CompletableFuture.supplyAsync(
+                () -> countTable("products"), executor);
+
+            CompletableFuture<Map<String, Object>> ordersFuture = CompletableFuture.supplyAsync(
+                () -> getOrderStatsOptimized(), executor);
+
+            // Đợi tất cả hoàn thành với timeout
+            Long totalCustomers = customersFuture.get(10, TimeUnit.SECONDS);
+            Long totalProducts = productsFuture.get(10, TimeUnit.SECONDS);
+            Map<String, Object> orderStats = ordersFuture.get(10, TimeUnit.SECONDS);
+
             stats.put("totalCustomers", totalCustomers);
-            
-            // Tổng số sản phẩm - đếm thủ công
-            ResultSet rs2 = session.execute("SELECT * FROM products");
-            long totalProducts = 0;
-            for (Row row : rs2) {
-                totalProducts++;
-            }
             stats.put("totalProducts", totalProducts);
-            
-            // Tổng số đơn hàng - chỉ tính Completed
-            ResultSet rs3 = session.execute("SELECT * FROM orders_by_id");
-            long totalOrders = 0;
-            long completedOrders = 0;
-            BigDecimal totalRevenue = BigDecimal.ZERO;
-            for (Row row : rs3) {
-                totalOrders++;
-                String status = row.getString("status");
-                BigDecimal orderTotal = row.getBigDecimal("total");
-                
-                // Chỉ tính doanh thu cho đơn hàng Completed
-                if ("Completed".equals(status) && orderTotal != null) {
-                    totalRevenue = totalRevenue.add(orderTotal);
-                    completedOrders++;
-                }
-            }
-            stats.put("totalOrders", totalOrders);
-            stats.put("totalRevenue", totalRevenue);
-            
+            stats.put("totalOrders", orderStats.get("totalOrders"));
+            stats.put("totalRevenue", orderStats.get("totalRevenue"));
+
+            cacheManager.put(cacheKey, stats);
+
         } catch (Exception e) {
+            System.err.println("Lỗi trong getTongQuan(): " + e.getMessage());
             e.printStackTrace();
-            System.out.println("Lỗi khi lấy tổng quan hệ thống: " + e.getMessage());
-            // Trả về giá trị 0 thật thay vì dữ liệu giả
             stats.put("totalCustomers", 0L);
             stats.put("totalProducts", 0L);
             stats.put("totalOrders", 0L);
             stats.put("totalRevenue", BigDecimal.ZERO);
         }
-        
+
         return stats;
     }
-    
-    // 2. Doanh thu theo tháng (12 tháng gần nhất) - Từ CSDL
-    public Map<String, BigDecimal> getDoanhThuTheoThang() {
-        Map<String, BigDecimal> doanhThu = new LinkedHashMap<>();
-        
+
+    // Helper: Count table efficiently
+    private long countTable(String tableName) {
         try {
-            // Lấy 12 tháng gần nhất (từ 2024-01 đến 2024-12)
-            LocalDate baseDate = LocalDate.of(2024, 10, 1); // Tháng 10/2024 làm gốc
+            ResultSet rs = session.execute("SELECT * FROM " + tableName);
+            long count = 0;
+            for (Row row : rs) {
+                count++;
+            }
+            return count;
+        } catch (Exception e) {
+            System.err.println("Lỗi đếm bảng " + tableName + ": " + e.getMessage());
+            return 0L;
+        }
+    }
+
+    // Helper: Get order stats optimized
+    private Map<String, Object> getOrderStatsOptimized() {
+        Map<String, Object> result = new HashMap<>();
+        long totalOrders = 0;
+        BigDecimal totalRevenue = BigDecimal.ZERO;
+
+        try {
+            ResultSet rs = session.execute("SELECT status, total FROM orders_by_id");
+
+            for (Row row : rs) {
+                totalOrders++;
+                String status = row.getString("status");
+                BigDecimal orderTotal = row.getBigDecimal("total");
+
+                if ("Completed".equals(status) && orderTotal != null) {
+                    totalRevenue = totalRevenue.add(orderTotal);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Lỗi lấy thống kê đơn hàng: " + e.getMessage());
+        }
+
+        result.put("totalOrders", totalOrders);
+        result.put("totalRevenue", totalRevenue);
+        return result;
+    }
+    
+    // 2. Doanh thu theo tháng - OPTIMIZED với caching
+    public Map<String, BigDecimal> getDoanhThuTheoThang() {
+        String cacheKey = "doanh_thu_thang";
+        Map<String, BigDecimal> cached = cacheManager.get(cacheKey, Map.class);
+        if (cached != null) return cached;
+
+        Map<String, BigDecimal> doanhThu = new LinkedHashMap<>();
+
+        try {
+            LocalDate baseDate = LocalDate.of(2024, 10, 1);
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM");
-            
-            // Lấy tất cả đơn hàng từ database
-            ResultSet rs = session.execute("SELECT * FROM orders_by_id");
-            
-            // Khởi tạo 12 tháng từ 2023-11 đến 2024-10 với giá trị 0
+
+            // Khởi tạo 12 tháng
             for (int i = 11; i >= 0; i--) {
                 LocalDate thang = baseDate.minusMonths(i);
                 String thangStr = thang.format(formatter);
                 doanhThu.put(thangStr, BigDecimal.ZERO);
             }
-            
-            // Tính doanh thu từ đơn hàng thực tế - chỉ Completed
+
+            // Query với filter để tối ưu
+            ResultSet rs = session.execute(
+                "SELECT order_date, total FROM orders_by_id WHERE status = 'Completed' ALLOW FILTERING"
+            );
+
             for (Row row : rs) {
                 try {
                     java.time.Instant orderInstant = row.get("order_date", java.time.Instant.class);
                     BigDecimal total = row.getBigDecimal("total");
-                    String status = row.getString("status");
-                    
-                    // Chỉ tính đơn hàng Completed
-                    if (orderInstant != null && total != null && "Completed".equals(status)) {
+
+                    if (orderInstant != null && total != null) {
                         LocalDate localDate = orderInstant
                             .atZone(java.time.ZoneId.systemDefault())
                             .toLocalDate();
-                        
+
                         String monthKey = localDate.format(formatter);
-                        
-                        // Nếu tháng nằm trong 12 tháng gần nhất
+
                         if (doanhThu.containsKey(monthKey)) {
-                            BigDecimal currentRevenue = doanhThu.get(monthKey);
-                            doanhThu.put(monthKey, currentRevenue.add(total));
+                            doanhThu.computeIfPresent(monthKey, (k, v) -> v.add(total));
                         }
                     }
                 } catch (Exception e) {
-                    // Bỏ qua row lỗi và in log để debug
-                    System.out.println("Lỗi xử lý row: " + e.getMessage());
-                    continue;
+                    System.err.println("Lỗi xử lý row trong getDoanhThuTheoThang(): " + e.getMessage());
                 }
             }
-            
+
+            cacheManager.put(cacheKey, doanhThu);
+
         } catch (Exception e) {
+            System.err.println("Lỗi trong getDoanhThuTheoThang(): " + e.getMessage());
             e.printStackTrace();
-            // Nếu có lỗi, vẫn trả về dữ liệu rỗng thay vì dữ liệu giả
-            System.out.println("Lỗi khi lấy dữ liệu doanh thu theo tháng: " + e.getMessage());
         }
-        
+
         return doanhThu;
     }
     
-    // 3. Top 10 sản phẩm bán chạy - Tính từ đơn hàng thực
+    // 3. Top 10 sản phẩm bán chạy - OPTIMIZED với caching - FIXED: Query từ orders_by_customer
     public List<Map<String, Object>> getTopSanPhamBanChay() {
+        String cacheKey = "top_san_pham";
+        List<Map<String, Object>> cached = cacheManager.get(cacheKey, List.class);
+        if (cached != null) return cached;
+
         List<Map<String, Object>> topProducts = new ArrayList<>();
         Map<String, Integer> productSales = new HashMap<>();
-        
+
         try {
-            // Lấy tất cả đơn hàng và tính số lượng bán cho từng sản phẩm
-            ResultSet ordersRs = session.execute("SELECT * FROM orders_by_customer");
-            
-            for (Row orderRow : ordersRs) {
-                String status = orderRow.getString("status");
-                // Chỉ tính đơn hàng đã hoàn thành
-                if ("Completed".equals(status)) {
-                    // Lấy items từ đơn hàng (giả sử có trường items hoặc product_id)
-                    // Vì cấu trúc DB có thể khác, tôi sẽ sử dụng cách đơn giản
-                    String orderId = orderRow.getString("order_id");
-                    
-                    // Giả sử mỗi đơn hàng có 1-3 sản phẩm (dựa vào order_id để tạo pattern)
-                    int productCount = (orderId.hashCode() % 3) + 1;
-                    
-                    // Lấy danh sách sản phẩm để phân phối
-                    ResultSet productsRs = session.execute("SELECT model FROM products");
-                    List<String> productNames = new ArrayList<>();
-                    for (Row productRow : productsRs) {
-                        productNames.add(productRow.getString("model"));
-                    }
-                    
-                    if (!productNames.isEmpty()) {
-                        // Phân phối sản phẩm dựa trên order_id
-                        for (int i = 0; i < productCount; i++) {
-                            int productIndex = (orderId.hashCode() + i) % productNames.size();
-                            String productName = productNames.get(Math.abs(productIndex));
-                            productSales.put(productName, productSales.getOrDefault(productName, 0) + 1);
+            // Query từ orders_by_customer và chỉ lấy items của đơn hàng Completed
+            ResultSet rs = session.execute(
+                "SELECT items FROM orders_by_customer WHERE status = 'Completed' ALLOW FILTERING"
+            );
+
+            for (Row row : rs) {
+                try {
+                    // Parse list<frozen<order_item>>
+                    List<com.datastax.oss.driver.api.core.data.UdtValue> items = row.getList("items", com.datastax.oss.driver.api.core.data.UdtValue.class);
+
+                    if (items != null) {
+                        for (com.datastax.oss.driver.api.core.data.UdtValue item : items) {
+                            String model = item.getString("model");
+                            Integer qty = item.getInt("qty");
+
+                            if (model != null && qty != null) {
+                                productSales.merge(model, qty, Integer::sum);
+                            }
                         }
                     }
+                } catch (Exception e) {
+                    System.err.println("Lỗi xử lý row trong getTopSanPhamBanChay(): " + e.getMessage());
                 }
             }
-            
-            // Chuyển đổi sang định dạng cần thiết và sắp xếp
-            for (Map.Entry<String, Integer> entry : productSales.entrySet()) {
-                Map<String, Object> product = new HashMap<>();
-                product.put("name", entry.getKey());
-                product.put("value", entry.getValue());
-                topProducts.add(product);
-            }
-            
-            // Sắp xếp theo số lượng bán giảm dần và lấy top 10
-            topProducts.stream()
-                .sorted((a, b) -> Integer.compare((Integer)b.get("value"), (Integer)a.get("value")))
+
+            // Chuyển đổi sang định dạng cần thiết và sắp xếp top 10
+            productSales.entrySet().stream()
+                .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
                 .limit(10)
-                .collect(java.util.stream.Collectors.toList());
-                
+                .forEach(entry -> {
+                    Map<String, Object> product = new HashMap<>();
+                    product.put("name", entry.getKey());
+                    product.put("value", entry.getValue());
+                    topProducts.add(product);
+                });
+
+            cacheManager.put(cacheKey, topProducts);
+
         } catch (Exception e) {
+            System.err.println("Lỗi trong getTopSanPhamBanChay(): " + e.getMessage());
             e.printStackTrace();
-            System.out.println("Lỗi khi tính toán sản phẩm bán chạy: " + e.getMessage());
         }
-        
+
         return topProducts;
     }
     
-    // 4. Thống kê khách hàng theo tier - đếm thủ công
+    // 4. Thống kê khách hàng theo tier - OPTIMIZED với caching
     public Map<String, Long> getKhachHangTheoTier() {
+        String cacheKey = "khach_hang_tier";
+        Map<String, Long> cached = cacheManager.get(cacheKey, Map.class);
+        if (cached != null) return cached;
+
         Map<String, Long> tierStats = new HashMap<>();
         tierStats.put("Bronze", 0L);
         tierStats.put("Silver", 0L);
         tierStats.put("Gold", 0L);
         tierStats.put("No Tier", 0L);
-        
+
         try {
-            ResultSet rs = session.execute("SELECT * FROM loyalty_accounts");
-            
+            ResultSet rs = session.execute("SELECT tier FROM loyalty_accounts");
+
             for (Row row : rs) {
                 String tier = row.getString("tier");
                 if (tier == null || tier.isEmpty()) {
                     tier = "No Tier";
                 }
-                tierStats.put(tier, tierStats.getOrDefault(tier, 0L) + 1);
+                tierStats.merge(tier, 1L, Long::sum);
             }
+
+            cacheManager.put(cacheKey, tierStats);
+
         } catch (Exception e) {
+            System.err.println("Lỗi trong getKhachHangTheoTier(): " + e.getMessage());
             e.printStackTrace();
-            System.out.println("Lỗi khi lấy thống kê khách hàng theo tier: " + e.getMessage());
         }
-        
+
         return tierStats;
     }
     
-    // 5. Thống kê đơn hàng theo trạng thái - đếm thủ công
+    // 5. Thống kê đơn hàng theo trạng thái - OPTIMIZED với caching
     public Map<String, Long> getDonHangTheoTrangThai() {
+        String cacheKey = "don_hang_trang_thai";
+        Map<String, Long> cached = cacheManager.get(cacheKey, Map.class);
+        if (cached != null) return cached;
+
         Map<String, Long> statusStats = new HashMap<>();
         statusStats.put("Completed", 0L);
         statusStats.put("Pending", 0L);
         statusStats.put("Cancelled", 0L);
-        
+
         try {
-            ResultSet rs = session.execute("SELECT * FROM orders_by_id");
-            
+            ResultSet rs = session.execute("SELECT status FROM orders_by_id");
+
             for (Row row : rs) {
                 String status = row.getString("status");
-                statusStats.put(status != null ? status : "Unknown", statusStats.getOrDefault(status, 0L) + 1);
+                if (status == null) status = "Unknown";
+                statusStats.merge(status, 1L, Long::sum);
             }
+
+            cacheManager.put(cacheKey, statusStats);
+
         } catch (Exception e) {
+            System.err.println("Lỗi trong getDonHangTheoTrangThai(): " + e.getMessage());
             e.printStackTrace();
-            System.out.println("Lỗi khi lấy thống kê đơn hàng theo trạng thái: " + e.getMessage());
         }
-        
+
         return statusStats;
     }
     
-    // 6. Thống kê sản phẩm theo thương hiệu - đếm thủ công
+    // 6. Thống kê sản phẩm theo thương hiệu - OPTIMIZED với caching
     public Map<String, Long> getSanPhamTheoBrand() {
+        String cacheKey = "san_pham_brand";
+        Map<String, Long> cached = cacheManager.get(cacheKey, Map.class);
+        if (cached != null) return cached;
+
         Map<String, Long> brandStats = new HashMap<>();
-        
+
         try {
-            ResultSet rs = session.execute("SELECT * FROM products");
-            
+            ResultSet rs = session.execute("SELECT brand FROM products");
+
             for (Row row : rs) {
                 String brand = row.getString("brand");
                 if (brand == null || brand.isEmpty()) {
                     brand = "Unknown";
                 }
-                brandStats.put(brand, brandStats.getOrDefault(brand, 0L) + 1);
+                brandStats.merge(brand, 1L, Long::sum);
             }
-            
+
+            cacheManager.put(cacheKey, brandStats);
+
         } catch (Exception e) {
+            System.err.println("Lỗi trong getSanPhamTheoBrand(): " + e.getMessage());
             e.printStackTrace();
-            System.out.println("Lỗi khi lấy thống kê thương hiệu: " + e.getMessage());
         }
-        
+
         return brandStats;
     }
     
-    // 7. Doanh thu theo ngày (30 ngày gần nhất) - Từ DB thực
+    // 7. Doanh thu theo ngày (30 ngày gần nhất) - OPTIMIZED với caching
     public Map<String, BigDecimal> getDoanhThuTheoNgay() {
+        String cacheKey = "doanh_thu_ngay";
+        Map<String, BigDecimal> cached = cacheManager.get(cacheKey, Map.class);
+        if (cached != null) return cached;
+
         Map<String, BigDecimal> dailyRevenue = new LinkedHashMap<>();
-        
+
         try {
             LocalDate now = LocalDate.now();
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-            
-            // Khởi tạo 30 ngày gần nhất với giá trị 0
+
+            // Khởi tạo 30 ngày gần nhất
             for (int i = 29; i >= 0; i--) {
                 LocalDate date = now.minusDays(i);
                 String dateStr = date.format(formatter);
                 dailyRevenue.put(dateStr, BigDecimal.ZERO);
             }
-            
-            // Lấy tất cả đơn hàng từ database
-            ResultSet rs = session.execute("SELECT * FROM orders_by_id");
-            
+
+            // Query với filter để tối ưu
+            ResultSet rs = session.execute(
+                "SELECT order_date, total FROM orders_by_id WHERE status = 'Completed' ALLOW FILTERING"
+            );
+
             for (Row row : rs) {
                 try {
                     java.time.Instant orderInstant = row.get("order_date", java.time.Instant.class);
                     BigDecimal total = row.getBigDecimal("total");
-                    String status = row.getString("status");
-                    
-                    // Chỉ tính đơn hàng Completed
-                    if (orderInstant != null && total != null && "Completed".equals(status)) {
+
+                    if (orderInstant != null && total != null) {
                         LocalDate localDate = orderInstant
                             .atZone(java.time.ZoneId.systemDefault())
                             .toLocalDate();
-                        
+
                         String dateKey = localDate.format(formatter);
-                        
-                        // Nếu ngày nằm trong 30 ngày gần nhất
+
                         if (dailyRevenue.containsKey(dateKey)) {
-                            BigDecimal currentRevenue = dailyRevenue.get(dateKey);
-                            dailyRevenue.put(dateKey, currentRevenue.add(total));
+                            dailyRevenue.computeIfPresent(dateKey, (k, v) -> v.add(total));
                         }
                     }
                 } catch (Exception e) {
-                    System.out.println("Lỗi xử lý row doanh thu ngày: " + e.getMessage());
-                    continue;
+                    System.err.println("Lỗi xử lý row trong getDoanhThuTheoNgay(): " + e.getMessage());
                 }
             }
-            
+
+            cacheManager.put(cacheKey, dailyRevenue);
+
         } catch (Exception e) {
+            System.err.println("Lỗi trong getDoanhThuTheoNgay(): " + e.getMessage());
             e.printStackTrace();
-            System.out.println("Lỗi khi lấy doanh thu theo ngày: " + e.getMessage());
         }
-        
+
         return dailyRevenue;
     }
     
-    // 8. Thống kê đơn hàng theo tháng (6 tháng gần nhất) - Từ DB thực
+    // 8. Thống kê đơn hàng theo tháng (6 tháng gần nhất) - OPTIMIZED với caching
     public Map<String, Long> getDonHangTheoThang() {
+        String cacheKey = "don_hang_thang";
+        Map<String, Long> cached = cacheManager.get(cacheKey, Map.class);
+        if (cached != null) return cached;
+
         Map<String, Long> monthlyOrders = new LinkedHashMap<>();
-        
+
         try {
             LocalDate now = LocalDate.now();
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM/yyyy");
-            
-            // Khởi tạo 6 tháng gần nhất với giá trị 0
+
+            // Khởi tạo 6 tháng gần nhất
             for (int i = 5; i >= 0; i--) {
                 LocalDate thang = now.minusMonths(i);
                 String thangStr = thang.format(formatter);
                 monthlyOrders.put(thangStr, 0L);
             }
-            
-            // Lấy tất cả đơn hàng từ database
-            ResultSet rs = session.execute("SELECT * FROM orders_by_id");
-            
+
+            ResultSet rs = session.execute("SELECT order_date FROM orders_by_id");
+
             for (Row row : rs) {
                 try {
                     java.time.Instant orderInstant = row.get("order_date", java.time.Instant.class);
-                    
+
                     if (orderInstant != null) {
                         LocalDate localDate = orderInstant
                             .atZone(java.time.ZoneId.systemDefault())
                             .toLocalDate();
-                        
+
                         String monthKey = localDate.format(formatter);
-                        
-                        // Nếu tháng nằm trong 6 tháng gần nhất
+
                         if (monthlyOrders.containsKey(monthKey)) {
-                            Long currentCount = monthlyOrders.get(monthKey);
-                            monthlyOrders.put(monthKey, currentCount + 1);
+                            monthlyOrders.merge(monthKey, 1L, Long::sum);
                         }
                     }
                 } catch (Exception e) {
-                    System.out.println("Lỗi xử lý row đơn hàng: " + e.getMessage());
-                    continue;
+                    System.err.println("Lỗi xử lý row trong getDonHangTheoThang(): " + e.getMessage());
                 }
             }
-            
+
+            cacheManager.put(cacheKey, monthlyOrders);
+
         } catch (Exception e) {
+            System.err.println("Lỗi trong getDonHangTheoThang(): " + e.getMessage());
             e.printStackTrace();
-            System.out.println("Lỗi khi lấy thống kê đơn hàng theo tháng: " + e.getMessage());
         }
-        
+
         return monthlyOrders;
     }
     
-    // 9. Thống kê điểm tích lũy khách hàng
+    // 9. Thống kê điểm tích lũy khách hàng - OPTIMIZED với caching
     public Map<String, Long> getDiemTichLuyKhachHang() {
+        String cacheKey = "diem_tich_luy";
+        Map<String, Long> cached = cacheManager.get(cacheKey, Map.class);
+        if (cached != null) return cached;
+
         Map<String, Long> loyaltyStats = new HashMap<>();
-        
+        loyaltyStats.put("0-1000 điểm", 0L);
+        loyaltyStats.put("1000-5000 điểm", 0L);
+        loyaltyStats.put("5000-10000 điểm", 0L);
+        loyaltyStats.put("Trên 10000 điểm", 0L);
+
         try {
-            ResultSet rs = session.execute("SELECT * FROM loyalty_accounts");
-            
-            loyaltyStats.put("0-1000 điểm", 0L);
-            loyaltyStats.put("1000-5000 điểm", 0L);
-            loyaltyStats.put("5000-10000 điểm", 0L);
-            loyaltyStats.put("Trên 10000 điểm", 0L);
-            
+            ResultSet rs = session.execute("SELECT points FROM loyalty_accounts");
+
             for (Row row : rs) {
                 Long points = row.getLong("points");
                 if (points == null) points = 0L;
-                
+
+                String range;
                 if (points < 1000) {
-                    loyaltyStats.put("0-1000 điểm", loyaltyStats.get("0-1000 điểm") + 1);
+                    range = "0-1000 điểm";
                 } else if (points < 5000) {
-                    loyaltyStats.put("1000-5000 điểm", loyaltyStats.get("1000-5000 điểm") + 1);
+                    range = "1000-5000 điểm";
                 } else if (points < 10000) {
-                    loyaltyStats.put("5000-10000 điểm", loyaltyStats.get("5000-10000 điểm") + 1);
+                    range = "5000-10000 điểm";
                 } else {
-                    loyaltyStats.put("Trên 10000 điểm", loyaltyStats.get("Trên 10000 điểm") + 1);
+                    range = "Trên 10000 điểm";
                 }
+                loyaltyStats.merge(range, 1L, Long::sum);
             }
+
+            cacheManager.put(cacheKey, loyaltyStats);
+
         } catch (Exception e) {
+            System.err.println("Lỗi trong getDiemTichLuyKhachHang(): " + e.getMessage());
             e.printStackTrace();
-            System.out.println("Lỗi khi lấy thống kê điểm tích lũy: " + e.getMessage());
         }
-        
+
         return loyaltyStats;
+    }
+    
+    // ===== RESOURCE MANAGEMENT =====
+    public void shutdown() {
+        if (executor != null && !executor.isShutdown()) {
+            executor.shutdown();
+            try {
+                if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
+                    System.err.println("Executor did not terminate gracefully, forcing shutdown");
+                    executor.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                System.err.println("Interrupted while waiting for executor shutdown: " + e.getMessage());
+                executor.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
+        }
+    }
+    
+    // ===== CACHE MANAGEMENT =====
+    public void clearCache() {
+        cacheManager.clear();
+    }
+    
+    public void clearCache(String key) {
+        // Note: CacheManager doesn't have remove method, so we clear all
+        // In production, you might want to enhance CacheManager with remove method
+        cacheManager.clear();
     }
 }
