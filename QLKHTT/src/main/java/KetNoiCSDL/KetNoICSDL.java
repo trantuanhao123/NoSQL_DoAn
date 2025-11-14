@@ -7,7 +7,7 @@ import java.net.InetSocketAddress;
 
 public class KetNoICSDL {
     private static CqlSession session;
-    private static final String KEYSPACE_NAME = "QLKHTT2";
+    private static final String KEYSPACE_NAME = "QLKHTT";
 
     private KetNoICSDL() {}
 
