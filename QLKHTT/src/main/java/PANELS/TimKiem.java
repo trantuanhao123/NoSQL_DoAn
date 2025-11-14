@@ -1,17 +1,12 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JPanel.java to edit this template
- */
 package PANELS;
 
-import DAO.TimKiemService;
+import SERVICE.TimKiemService;
 import java.awt.event.ActionEvent;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import javax.swing.table.DefaultTableModel;
 
 public class TimKiem extends javax.swing.JPanel {
@@ -24,11 +19,11 @@ public class TimKiem extends javax.swing.JPanel {
     public TimKiem() {
         initComponents();
         txtKey.setPreferredSize(new java.awt.Dimension(200, 22));
-    txtKey.setToolTipText("Nhập: email, số điện thoại, ID, hoặc định dạng customer_id,yyyy_mm cho đơn hàng, customer_id,points_delta,spent_delta cho cập nhật điểm");
-    txtKey.setText(""); // Clear any default text
-    btnSearch.setText("Tìm Kiếm"); // Ensure correct text
-    lblStatus.setText("");
-    tblResults.setModel(new DefaultTableModel(new Object[][]{}, new String[]{})); // Reset table
+        txtKey.setToolTipText("Nhập: email, số điện thoại, ID, hoặc định dạng customer_id,yyyy_mm cho đơn hàng, customer_id,points_delta,spent_delta cho cập nhật điểm");
+        txtKey.setText(""); // Clear any default text
+        btnSearch.setText("Tìm Kiếm"); // Ensure correct text
+        lblStatus.setText("");
+        tblResults.setModel(new DefaultTableModel(new Object[][]{}, new String[]{})); // Reset table
     }
 
     /**
@@ -122,7 +117,7 @@ public class TimKiem extends javax.swing.JPanel {
     }// </editor-fold>//GEN-END:initComponents
 
     private void btnSearchActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSearchActionPerformed
-        String key = txtKey.getText().trim();
+       String key = txtKey.getText().trim();
         if (key.isEmpty()) {
             lblStatus.setText("Vui lòng nhập từ khóa tìm kiếm.");
             return;
@@ -146,8 +141,7 @@ public class TimKiem extends javax.swing.JPanel {
                     populateCustomerTable(model, results);
                     break;
                 case "Tìm Khách Hàng Theo ID":
-                    UUID custId = UUID.fromString(key);
-                    singleResult = service.getCustomerDetails(custId);
+                    singleResult = service.getCustomerDetails(key); 
                     setCustomerColumns(model);
                     if (!singleResult.isEmpty()) {
                         addCustomerRow(model, singleResult);
@@ -170,23 +164,23 @@ public class TimKiem extends javax.swing.JPanel {
                     if (parts.length != 2) {
                         throw new IllegalArgumentException("Định dạng: customer_id,yyyy_mm");
                     }
-                    UUID orderCustId = UUID.fromString(parts[0].trim());
+                    String orderCustId = parts[0].trim(); 
                     String yyyyMm = parts[1].trim();
                     results = service.getCustomerOrderHistory(orderCustId, yyyyMm);
                     setOrderColumns(model);
                     populateOrderTable(model, results);
                     break;
                 case "Tìm Đơn Hàng Theo ID":
-                    UUID orderId = UUID.fromString(key);
-                    singleResult = service.getOrderById(orderId);
+                    singleResult = service.getOrderById(key); 
                     setOrderColumns(model);
                     if (!singleResult.isEmpty()) {
                         addOrderRow(model, singleResult);
                     }
                     break;
                 case "Thông Tin Điểm Tích Lũy Theo ID Khách Hàng":
-                    UUID loyaltyId = UUID.fromString(key);
-                    singleResult = service.getCustomerLoyalty(loyaltyId);
+                    // SỬA: Không dùng UUID.fromString(key)
+                    // UUID loyaltyId = UUID.fromString(key);
+                    singleResult = service.getCustomerLoyalty(key);
                     setLoyaltyColumns(model);
                     if (!singleResult.isEmpty()) {
                         addLoyaltyRow(model, singleResult);
@@ -197,7 +191,7 @@ public class TimKiem extends javax.swing.JPanel {
                     if (updateParts.length != 3) {
                         throw new IllegalArgumentException("Định dạng: customer_id,points_delta,spent_delta");
                     }
-                    UUID updateId = UUID.fromString(updateParts[0].trim());
+                    String updateId = updateParts[0].trim(); 
                     long pointsDelta = Long.parseLong(updateParts[1].trim());
                     BigDecimal spentDelta = new BigDecimal(updateParts[2].trim());
                     boolean success = service.updateCustomerLoyalty(updateId, pointsDelta, spentDelta);

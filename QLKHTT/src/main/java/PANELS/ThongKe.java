@@ -1,19 +1,14 @@
 package PANELS;
 
-import DAO.ThongKeService;
 import DAO.ChartUtils;
+import SERVICE.ThongKeService;
 import org.jfree.chart.ChartPanel;
 
 import javax.swing.*;
 import java.awt.*;
 import java.math.BigDecimal;
-import java.util.List;
 import java.util.Map;
 
-/**
- * Panel Thống kê với biểu đồ chuyên nghiệp  
- * @author HAO
- */
 public class ThongKe extends javax.swing.JPanel {
     
     private ThongKeService thongKeService;
@@ -143,6 +138,7 @@ public class ThongKe extends javax.swing.JPanel {
     }
     
     private void loadData() {
+        thongKeService.clearCache();
         SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
             @Override
             protected Void doInBackground() throws Exception {

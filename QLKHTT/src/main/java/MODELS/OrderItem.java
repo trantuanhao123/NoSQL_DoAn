@@ -3,10 +3,6 @@ package MODELS;
 import java.math.BigDecimal;
 import java.io.Serializable;
 
-/**
- * Lớp OrderItem mô tả 1 sản phẩm trong đơn hàng.
- * Không sử dụng annotation của Cassandra mapper.
- */
 public class OrderItem implements Serializable {
 
     private String productId;
@@ -14,10 +10,9 @@ public class OrderItem implements Serializable {
     private int quantity;
     private BigDecimal price;
 
-    // ✅ Constructor mặc định (Cassandra driver cần để deserialize)
-    public OrderItem() {}
+    public OrderItem() {
+    }
 
-    // ✅ Constructor đầy đủ
     public OrderItem(String productId, String model, int quantity, BigDecimal price) {
         this.productId = productId;
         this.model = model;
@@ -25,7 +20,6 @@ public class OrderItem implements Serializable {
         this.price = price;
     }
 
-    // ✅ Getters / Setters
     public String getProductId() {
         return productId;
     }
@@ -58,14 +52,13 @@ public class OrderItem implements Serializable {
         this.price = price;
     }
 
-    // ✅ Optional: hỗ trợ debug hoặc log
     @Override
     public String toString() {
-        return "OrderItem{" +
-                "productId='" + productId + '\'' +
-                ", model='" + model + '\'' +
-                ", quantity=" + quantity +
-                ", price=" + price +
-                '}';
+        return "OrderItem{"
+                + "productId='" + productId + '\''
+                + ", model='" + model + '\''
+                + ", quantity=" + quantity
+                + ", price=" + price
+                + '}';
     }
 }

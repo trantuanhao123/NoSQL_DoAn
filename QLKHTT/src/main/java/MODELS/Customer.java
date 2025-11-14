@@ -2,11 +2,10 @@ package MODELS;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.UUID;
 
 public class Customer {
 
-    private UUID customerId;
+    private String customerId;
     private String fullName;
     private String email;
     private String phone;
@@ -16,62 +15,75 @@ public class Customer {
     private Instant createdAt;
     private String status;
 
-    public Customer() {}
-
-    public Customer(UUID customerId, String fullName, String email, String phone,
-                    LocalDate dob, String gender, String address,
-                    Instant createdAt, String status) {
-        this.customerId = customerId;
-        this.fullName = fullName;
-        this.email = email;
-        this.phone = phone;
-        this.dob = dob;
-        this.gender = gender;
-        this.address = address;
-        this.createdAt = createdAt;
-        this.status = status;
+    public String getCustomerId() {
+        return customerId;
     }
 
-    // ✅ Getters / Setters
-    public UUID getCustomerId() { return customerId; }
-    public void setCustomerId(UUID customerId) { this.customerId = customerId; }
+    public void setCustomerId(String customerId) {
+        this.customerId = customerId;
+    }
 
-    public String getFullName() { return fullName; }
-    public void setFullName(String fullName) { this.fullName = fullName; }
+    public String getFullName() {
+        return fullName;
+    }
 
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
+    public void setFullName(String fullName) {
+        this.fullName = fullName;
+    }
 
-    public String getPhone() { return phone; }
-    public void setPhone(String phone) { this.phone = phone; }
+    public String getEmail() {
+        return email;
+    }
 
-    public LocalDate getDob() { return dob; }
-    public void setDob(LocalDate dob) { this.dob = dob; }
+    public void setEmail(String email) {
+        this.email = email;
+    }
 
-    public String getGender() { return gender; }
-    public void setGender(String gender) { this.gender = gender; }
+    public String getPhone() {
+        return phone;
+    }
 
-    public String getAddress() { return address; }
-    public void setAddress(String address) { this.address = address; }
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
 
-    public Instant getCreatedAt() { return createdAt; }
-    public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
+    public LocalDate getDob() {
+        return dob;
+    }
 
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public void setDob(LocalDate dob) {
+        this.dob = dob;
+    }
 
-    @Override
-    public String toString() {
-        return "Customer{" +
-                "customerId=" + customerId +
-                ", fullName='" + fullName + '\'' +
-                ", email='" + email + '\'' +
-                ", phone='" + phone + '\'' +
-                ", dob=" + dob +
-                ", gender='" + gender + '\'' +
-                ", address='" + address + '\'' +
-                ", createdAt=" + createdAt +
-                ", status='" + status + '\'' +
-                '}';
+    public String getGender() {
+        return gender;
+    }
+
+    public void setGender(String gender) {
+        this.gender = gender;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
     }
 }

@@ -5,8 +5,9 @@
 package PANELS;
 
 import DAO.CustomerDAO;
+import DAO.OrderByCustomerDAO;
 import DAO.ProductDAO;
-import DAO.OrderService;
+import SERVICE.OrderService;
 import KetNoiCSDL.KetNoICSDL;
 import MODELS.Customer;
 import MODELS.Product;
@@ -29,65 +30,82 @@ import javax.swing.table.DefaultTableModel;
 
 public class DonHang extends javax.swing.JPanel {
 
-    /**
-     * Creates new form DonHang
-     */
-    private final Map<String, UUID> customerMap = new HashMap<>();
+    private final Map<String, String> customerMap = new HashMap<>();
     private final Map<String, Product> productMap = new HashMap<>();
     private final CqlSession session;
     private final CustomerDAO customerDAO;
     private final ProductDAO productDAO;
     private final OrderService orderService;
+    private final OrderByCustomerDAO orderByCustomerDAO; 
+    
+    private String selectedOrderId;
 
     public DonHang() {
         initComponents();
         this.session = KetNoICSDL.getSession();
-        this.customerDAO = new CustomerDAO(session);
+        
+        this.customerDAO = new CustomerDAO(session); 
         this.productDAO = new ProductDAO(session);
         this.orderService = new OrderService(session);
         
-        setupTables();
-        loadCustomers();
-        loadProducts();
-        loadOrders();
+        // THÊM: Khởi tạo DAO
+        this.orderByCustomerDAO = new OrderByCustomerDAO(session);
         
+        setupTables();
+        
+        // Gán sự kiện
         btnAddDH.addActionListener(e -> handleAddOrder());
         btnEditDH.addActionListener(e -> handleEditOrder());
         btnDelDH.addActionListener(e -> handleDeleteOrder());
         btnNewDH.addActionListener(e -> clearOrderForm());
-        btnLamMoi.addActionListener(e -> loadOrders());
+        
+        btnRenew.addActionListener(e -> {
+            loadCustomers();
+            loadProducts();
+            loadOrders(); 
+        });
+        
+        btnLamMoi.addActionListener(e -> {
+            loadOrders(); 
+        }); 
+        
         btnXoa.addActionListener(e -> removeSelectedProduct());
 
-        // Khi chọn đơn hàng => xem chi tiết
         tblDonHang.getSelectionModel().addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting() && tblDonHang.getSelectedRow() != -1) {
                 showOrderDetails();
             }
         });
 
-        // Khi click sản phẩm => thêm vào giỏ
         tblLaptop.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
                 addProductToOrder();
             }
         });
+        
+        // Tải dữ liệu ban đầu
+        loadCustomers();
+        loadProducts();
+        loadOrders(); 
+        
+        txtNgayDat.setEnabled(false);
     }
 
     // ======================== SETUP ============================
     private void setupTables() {
-        // Bảng danh sách sản phẩm trong đơn hàng
         tblDanhSachSanPham.setModel(new DefaultTableModel(
                 new Object[][]{},
                 new String[]{"Tên sản phẩm", "Số lượng", "Đơn giá", "Thành tiền"}
         ) {
             @Override
             public boolean isCellEditable(int row, int col) {
-                return col == 1; // Chỉ cho phép sửa số lượng
+                return col == 1; 
             }
         });
+        tblSanPhamDaChon.setViewportView(tblDanhSachSanPham); // Gán JTable vào JScrollPane
 
-        // Bảng danh sách laptop có sẵn
+
         tblLaptop.setModel(new DefaultTableModel(
                 new Object[][]{},
                 new String[]{"Mã SP", "Model", "Giá"}
@@ -98,7 +116,6 @@ public class DonHang extends javax.swing.JPanel {
             }
         });
 
-        // Bảng danh sách đơn hàng
         tblDonHang.setModel(new DefaultTableModel(
                 new Object[][]{},
                 new String[]{"Mã đơn hàng", "Khách hàng", "Ngày đặt", "Tổng tiền", "Trạng thái"}
@@ -115,20 +132,17 @@ public class DonHang extends javax.swing.JPanel {
         try {
             customerMap.clear();
             cboTenKH.removeAllItems();
-
             List<Customer> customers = customerDAO.findAll();
             for (Customer c : customers) {
                 String name = c.getFullName() != null ? c.getFullName() : "(Không tên)";
                 cboTenKH.addItem(name);
                 customerMap.put(name, c.getCustomerId());
             }
-            
             if (cboTenKH.getItemCount() > 0) {
                 cboTenKH.setSelectedIndex(-1);
             }
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "❌ Lỗi tải khách hàng: " + e.getMessage());
-            e.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Loi tai khach hang: " + e.getMessage());
         }
     }
 
@@ -137,10 +151,9 @@ public class DonHang extends javax.swing.JPanel {
             productMap.clear();
             DefaultTableModel model = (DefaultTableModel) tblLaptop.getModel();
             model.setRowCount(0);
-
             List<Product> products = productDAO.findAllProducts();
             for (Product p : products) {
-                if (p.isAvailable()) { // Chỉ hiển thị sản phẩm còn hàng
+                if (p.isAvailable()) { 
                     model.addRow(new Object[]{
                         p.getProductId(),
                         p.getModel(),
@@ -150,12 +163,18 @@ public class DonHang extends javax.swing.JPanel {
                 }
             }
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "❌ Lỗi tải sản phẩm: " + e.getMessage());
-            e.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Loi tai san pham: " + e.getMessage());
         }
     }
 
+    /**
+     * SỬA LỖI: Thêm clearOrderForm() và gọi orderByCustomerDAO.findAll()
+     */
     private void loadOrders() {
+        // Sửa lỗi render: Xóa chi tiết (bảng sản phẩm, v.v.)
+        // trước khi tải lại bảng đơn hàng.
+        clearOrderForm(); 
+        
         DefaultTableModel model = (DefaultTableModel) tblDonHang.getModel();
         model.setRowCount(0);
 
@@ -165,23 +184,31 @@ public class DonHang extends javax.swing.JPanel {
                 try {
                     DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")
                             .withZone(ZoneId.systemDefault());
+                            
+                    // SỬA LỖI NULL: Gọi trực tiếp DAO.findAll()
+                    // Lỗi "Unsupported null value" là do getOrdersByCustomer(null) gây ra.
+                    List<OrderByCustomer> allOrders = orderByCustomerDAO.findAll();
+                    
+                    // Tạo map tạm để tra cứu tên khách hàng
+                    Map<String, String> idToNameMap = new HashMap<>();
+                    for (Map.Entry<String, String> entry : customerMap.entrySet()) {
+                        idToNameMap.put(entry.getValue(), entry.getKey());
+                    }
 
-                    for (Map.Entry<String, UUID> entry : customerMap.entrySet()) {
-                        List<OrderByCustomer> orders = orderService.getOrdersByCustomer(entry.getValue());
-                        for (OrderByCustomer o : orders) {
-                            publish(new Object[]{
-                                o.getOrderId(),
-                                entry.getKey(),
-                                fmt.format(o.getOrderDate()),
-                                String.format("%,.0f đ", o.getTotal()),
-                                o.getStatus()
-                            });
-                        }
+                    for (OrderByCustomer o : allOrders) {
+                        String customerName = idToNameMap.getOrDefault(o.getCustomerId(), "(Khách hàng không rõ)");
+                        publish(new Object[]{
+                            o.getOrderId(),
+                            customerName,
+                            fmt.format(o.getOrderDate()),
+                            String.format("%,.0f d", o.getTotal()),
+                            o.getStatus()
+                        });
                     }
                 } catch (Exception ex) {
                     SwingUtilities.invokeLater(() -> 
                         JOptionPane.showMessageDialog(DonHang.this, 
-                            "❌ Lỗi tải đơn hàng: " + ex.getMessage())
+                            "Loi tai don hang: " + ex.getMessage())
                     );
                     ex.printStackTrace();
                 }
@@ -194,106 +221,122 @@ public class DonHang extends javax.swing.JPanel {
                     model.addRow(row);
                 }
             }
-
-            @Override
-            protected void done() {
-                System.out.println("✅ Đã tải " + model.getRowCount() + " đơn hàng");
-            }
         };
         worker.execute();
     }
 
     // ======================== CRUD ============================
     private void handleAddOrder() {
+        String orderId = txtMaDonHang.getText().trim();
+        if (orderId.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Vui long nhap Ma Don Hang!");
+            return;
+        }
+
         String customerName = (String) cboTenKH.getSelectedItem();
         if (customerName == null || !customerMap.containsKey(customerName)) {
-            JOptionPane.showMessageDialog(this, "⚠️ Vui lòng chọn khách hàng!");
+            JOptionPane.showMessageDialog(this, "Vui long chon khach hang!");
             return;
         }
 
-        UUID customerId = customerMap.get(customerName);
+        String customerId = customerMap.get(customerName);
         List<OrderItem> items = collectOrderItems();
         if (items.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "⚠️ Chưa có sản phẩm trong đơn hàng!");
+            JOptionPane.showMessageDialog(this, "Chua co san pham trong don hang!");
             return;
         }
-
+        
+        String status = cboStatus.getSelectedItem().toString();
+        
         try {
-            orderService.createOrder(customerId, items);
-            JOptionPane.showMessageDialog(this, "✅ Thêm đơn hàng thành công!");
+            if (orderService.getOrderById(orderId) != null) {
+                JOptionPane.showMessageDialog(this, "Ma Don Hang nay da ton tai!");
+                return;
+            }
+            
+            // Yêu cầu OrderService đã được sửa để nhận (orderId, customerId, items, status)
+            orderService.createOrder(orderId, customerId, items, status);
+            JOptionPane.showMessageDialog(this, "Them don hang thanh cong!");
             clearOrderForm();
             loadOrders();
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "❌ Lỗi thêm đơn hàng: " + e.getMessage());
-            e.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Loi them don hang: " + e.getMessage());
         }
     }
 
+    /**
+     * SỬA: Logic nút Sửa (Edit)
+     * Dùng logic "Xóa và Tạo lại" để cập nhật CẢ SẢN PHẨM VÀ TRẠNG THÁI.
+     */
     private void handleEditOrder() {
-        int row = tblDonHang.getSelectedRow();
-        if (row == -1) {
-            JOptionPane.showMessageDialog(this, "⚠️ Vui lòng chọn đơn hàng cần sửa!");
+        if (selectedOrderId == null) {
+            JOptionPane.showMessageDialog(this, "Vui long chon don hang can sua!");
             return;
         }
+        
+        // 1. Lấy Customer ID (An toàn nhất là từ Combobox đang chọn)
+        String customerName = (String) cboTenKH.getSelectedItem();
+        if (customerName == null || !customerMap.containsKey(customerName)) {
+             JOptionPane.showMessageDialog(this, "Khach hang duoc chon khong hop le!");
+             return;
+        }
+        String customerId = customerMap.get(customerName);
 
-        UUID orderId = (UUID) tblDonHang.getValueAt(row, 0);
-        String customerName = tblDonHang.getValueAt(row, 1).toString();
-        UUID customerId = customerMap.get(customerName);
-
+        // 2. Lấy danh sách sản phẩm MỚI từ bảng
         List<OrderItem> newItems = collectOrderItems();
         if (newItems.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "⚠️ Đơn hàng phải có ít nhất 1 sản phẩm!");
+            JOptionPane.showMessageDialog(this, "Don hang phai co it nhat 1 san pham!");
             return;
         }
+        
+        // 3. Lấy trạng thái MỚI
+        String newStatus = cboStatus.getSelectedItem().toString();
 
         int confirm = JOptionPane.showConfirmDialog(this,
-                "Cập nhật đơn hàng sẽ xóa đơn cũ và tạo đơn mới. Bạn có chắc chắn?",
-                "Xác nhận cập nhật",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.WARNING_MESSAGE);
+                "Ban co chac chan muon CAP NHAT (xoa va tao lai) don hang " + selectedOrderId + "?\n"
+                + "Danh sach san pham va trang thai se duoc luu lai.",
+                "Xac nhan cap nhat",
+                JOptionPane.YES_NO_OPTION);
         
         if (confirm != JOptionPane.YES_OPTION) return;
 
         try {
-            // Xóa đơn hàng cũ
-            orderService.deleteOrder(orderId);
-            // Tạo đơn hàng mới với các item đã sửa
-            orderService.createOrder(customerId, newItems);
+            // 4. Xóa đơn hàng cũ (Service sẽ lo rollback loyalty nếu cần)
+            orderService.deleteOrder(selectedOrderId);
             
-            JOptionPane.showMessageDialog(this, "✅ Cập nhật đơn hàng thành công!");
+            // 5. Tạo lại đơn hàng với ID CŨ, nhưng sản phẩm MỚI và status MỚI
+            // (Service sẽ lo update loyalty nếu status là COMPLETED)
+            orderService.createOrder(selectedOrderId, customerId, newItems, newStatus);
+            
+            JOptionPane.showMessageDialog(this, "Cap nhat don hang thanh cong!");
             clearOrderForm();
             loadOrders();
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "❌ Lỗi cập nhật đơn hàng: " + e.getMessage());
+            JOptionPane.showMessageDialog(this, "Loi cap nhat don hang: " + e.getMessage());
             e.printStackTrace();
         }
     }
 
     private void handleDeleteOrder() {
-        int row = tblDonHang.getSelectedRow();
-        if (row == -1) {
-            JOptionPane.showMessageDialog(this, "⚠️ Vui lòng chọn đơn hàng cần xóa!");
+        if (selectedOrderId == null) {
+            JOptionPane.showMessageDialog(this, "Vui long chon don hang can xoa!");
             return;
         }
 
-        UUID orderId = (UUID) tblDonHang.getValueAt(row, 0);
-
         int confirm = JOptionPane.showConfirmDialog(this,
-                "Bạn có chắc chắn muốn xóa đơn hàng này?\nThao tác này không thể hoàn tác!",
-                "Xác nhận xóa",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.WARNING_MESSAGE);
+                "Ban co chac chan muon xoa don hang nay?\nThao tac nay khong a hoàn tac!",
+                "Xac nhan xoa",
+                JOptionPane.YES_NO_OPTION);
         
         if (confirm != JOptionPane.YES_OPTION) return;
 
         try {
-            orderService.deleteOrder(orderId);
-            JOptionPane.showMessageDialog(this, "🗑️ Xóa đơn hàng thành công!");
+            orderService.deleteOrder(selectedOrderId);
+            JOptionPane.showMessageDialog(this, "Xoa don hang thanh cong!");
             clearOrderForm();
             loadOrders();
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "❌ Lỗi khi xóa đơn hàng: " + e.getMessage());
-            e.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Loi khi xoa don hang: " + e.getMessage());
         }
     }
 
@@ -302,16 +345,19 @@ public class DonHang extends javax.swing.JPanel {
         int row = tblDonHang.getSelectedRow();
         if (row == -1) return;
 
-        UUID orderId = (UUID) tblDonHang.getValueAt(row, 0);
+        selectedOrderId = tblDonHang.getValueAt(row, 0).toString();
         String customerName = tblDonHang.getValueAt(row, 1).toString();
         
+        txtMaDonHang.setText(selectedOrderId);
+        txtMaDonHang.setEnabled(false); 
+        
         cboTenKH.setSelectedItem(customerName);
-        txtNgayDat.setText("Đang tải...");
+        txtNgayDat.setText("Dang tai...");
 
         SwingWorker<OrderById, Void> worker = new SwingWorker<>() {
             @Override
             protected OrderById doInBackground() throws Exception {
-                return orderService.getOrderById(orderId);
+                return orderService.getOrderById(selectedOrderId); 
             }
 
             @Override
@@ -320,13 +366,15 @@ public class DonHang extends javax.swing.JPanel {
                     OrderById order = get();
                     if (order == null) {
                         txtNgayDat.setText("");
-                        JOptionPane.showMessageDialog(DonHang.this, "⚠️ Không tìm thấy chi tiết đơn hàng!");
+                        JOptionPane.showMessageDialog(DonHang.this, "Khong tim thay chi tiet don hang!");
                         return;
                     }
 
                     DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss")
                             .withZone(ZoneId.systemDefault());
                     txtNgayDat.setText(fmt.format(order.getOrderDate()));
+                    
+                    cboStatus.setSelectedItem(order.getStatus());
 
                     DefaultTableModel model = (DefaultTableModel) tblDanhSachSanPham.getModel();
                     model.setRowCount(0);
@@ -336,13 +384,13 @@ public class DonHang extends javax.swing.JPanel {
                         model.addRow(new Object[]{
                             item.getModel(),
                             item.getQuantity(),
-                            String.format("%,.0f đ", item.getPrice()),
-                            String.format("%,.0f đ", total)
+                            String.format("%,.0f d", item.getPrice()),
+                            String.format("%,.0f d", total)
                         });
                     }
                 } catch (Exception e) {
                     txtNgayDat.setText("");
-                    JOptionPane.showMessageDialog(DonHang.this, "❌ Lỗi hiển thị chi tiết: " + e.getMessage());
+                    JOptionPane.showMessageDialog(DonHang.this, "Loi hien thi chi tiet: " + e.getMessage());
                     e.printStackTrace();
                 }
             }
@@ -359,13 +407,11 @@ public class DonHang extends javax.swing.JPanel {
             String modelName = model.getValueAt(i, 0).toString();
             int qty = Integer.parseInt(model.getValueAt(i, 1).toString());
             
-            // Lấy giá từ chuỗi đã format (loại bỏ " đ" và dấu phẩy)
             String priceStr = model.getValueAt(i, 2).toString()
-                    .replace(" đ", "")
+                    .replace(" d", "")
                     .replace(",", "");
             BigDecimal price = new BigDecimal(priceStr);
             
-            // Tìm product_id từ model name
             String productId = findProductIdByModel(modelName);
             
             list.add(new OrderItem(productId, modelName, qty, price));
@@ -379,7 +425,7 @@ public class DonHang extends javax.swing.JPanel {
                 return p.getProductId();
             }
         }
-        return UUID.randomUUID().toString(); // Fallback
+        return "UNKNOWN_ID"; // Fallback
     }
 
     private void addProductToOrder() {
@@ -393,34 +439,39 @@ public class DonHang extends javax.swing.JPanel {
         String model = src.getValueAt(row, 1).toString();
         BigDecimal price = (BigDecimal) src.getValueAt(row, 2);
 
-        // Kiểm tra xem sản phẩm đã có trong giỏ chưa
         for (int i = 0; i < dest.getRowCount(); i++) {
             if (dest.getValueAt(i, 0).equals(model)) {
-                // Tăng số lượng
                 int qty = Integer.parseInt(dest.getValueAt(i, 1).toString()) + 1;
                 dest.setValueAt(qty, i, 1);
                 
                 BigDecimal total = price.multiply(BigDecimal.valueOf(qty));
-                dest.setValueAt(String.format("%,.0f đ", total), i, 3);
+                dest.setValueAt(String.format("%,.0f d", total), i, 3);
                 return;
             }
         }
         
-        // Thêm sản phẩm mới
         dest.addRow(new Object[]{
             model,
             1,
-            String.format("%,.0f đ", price),
-            String.format("%,.0f đ", price)
+            String.format("%,.0f d", price),
+            String.format("%,.0f d", price)
         });
     }
 
     private void clearOrderForm() {
         ((DefaultTableModel) tblDanhSachSanPham.getModel()).setRowCount(0);
+        
+        txtMaDonHang.setText("");
+        txtMaDonHang.setEnabled(true);
+        selectedOrderId = null;
+        
         txtNgayDat.setText("");
         if (cboTenKH.getItemCount() > 0) {
             cboTenKH.setSelectedIndex(-1);
         }
+        cboStatus.setSelectedIndex(0); 
+        tblDonHang.clearSelection();
+        txtMaDonHang.requestFocus(); 
     }
 
     private void removeSelectedProduct() {
@@ -428,7 +479,7 @@ public class DonHang extends javax.swing.JPanel {
         if (row != -1) {
             ((DefaultTableModel) tblDanhSachSanPham.getModel()).removeRow(row);
         } else {
-            JOptionPane.showMessageDialog(this, "⚠️ Vui lòng chọn sản phẩm cần xóa!");
+            JOptionPane.showMessageDialog(this, "Vui long chon san pham can xoa!");
         }
     }
     /**
@@ -443,13 +494,13 @@ public class DonHang extends javax.swing.JPanel {
         jPanel1 = new javax.swing.JPanel();
         jScrollPane3 = new javax.swing.JScrollPane();
         tblDonHang = new javax.swing.JTable();
-        jScrollPane1 = new javax.swing.JScrollPane();
+        tblSanPhamDaChon = new javax.swing.JScrollPane();
         tblDanhSachSanPham = new javax.swing.JTable();
         pnMain = new javax.swing.JPanel();
         btnLamMoi = new javax.swing.JButton();
         btnXoa = new javax.swing.JButton();
         txtNgay = new javax.swing.JLabel();
-        txtNgayDat = new javax.swing.JTextField();
+        txtMaDonHang = new javax.swing.JTextField();
         btnRenew = new javax.swing.JButton();
         jLabel5 = new javax.swing.JLabel();
         cboTenKH = new javax.swing.JComboBox<>();
@@ -459,6 +510,10 @@ public class DonHang extends javax.swing.JPanel {
         btnNewDH = new javax.swing.JButton();
         jScrollPane2 = new javax.swing.JScrollPane();
         tblLaptop = new javax.swing.JTable();
+        cboStatus = new javax.swing.JComboBox<>();
+        jLabel6 = new javax.swing.JLabel();
+        jLabel7 = new javax.swing.JLabel();
+        txtNgayDat = new javax.swing.JTextField();
 
         setLayout(new java.awt.BorderLayout());
 
@@ -483,16 +538,16 @@ public class DonHang extends javax.swing.JPanel {
                 "Mã SP", "Model", "Số lượng", "Giá"
             }
         ));
-        jScrollPane1.setViewportView(tblDanhSachSanPham);
+        tblSanPhamDaChon.setViewportView(tblDanhSachSanPham);
 
-        btnLamMoi.setText("Làm Mới Thông Tin Bảng");
+        btnLamMoi.setText("Làm Mới Đơn Hàng");
         btnLamMoi.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 btnLamMoiActionPerformed(evt);
             }
         });
 
-        btnXoa.setText("Xóa Thông Tin Bảng");
+        btnXoa.setText("Xóa Sản Phẩm Đã Chọn");
         btnXoa.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 btnXoaActionPerformed(evt);
@@ -501,7 +556,7 @@ public class DonHang extends javax.swing.JPanel {
 
         txtNgay.setText("Ngày Đặt");
 
-        btnRenew.setText("Làm Mới Data");
+        btnRenew.setText("Làm Mới Tất Cả");
         btnRenew.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 btnRenewActionPerformed(evt);
@@ -549,6 +604,12 @@ public class DonHang extends javax.swing.JPanel {
         ));
         jScrollPane2.setViewportView(tblLaptop);
 
+        cboStatus.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Hoàn Thành", "Chờ Xử Lý", "Hủy" }));
+
+        jLabel6.setText("Trạng Thái");
+
+        jLabel7.setText("Mã ĐH");
+
         javax.swing.GroupLayout pnMainLayout = new javax.swing.GroupLayout(pnMain);
         pnMain.setLayout(pnMainLayout);
         pnMainLayout.setHorizontalGroup(
@@ -559,10 +620,18 @@ public class DonHang extends javax.swing.JPanel {
                         .addGroup(pnMainLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                             .addComponent(jLabel5, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                             .addComponent(txtNgay, javax.swing.GroupLayout.PREFERRED_SIZE, 89, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addGroup(pnMainLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                            .addComponent(cboTenKH, 0, 156, Short.MAX_VALUE)
+                            .addComponent(txtNgayDat))
+                        .addGap(10, 10, 10)
+                        .addGroup(pnMainLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                            .addComponent(jLabel6, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(jLabel7, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                         .addGap(18, 18, 18)
                         .addGroup(pnMainLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                            .addComponent(txtNgayDat)
-                            .addComponent(cboTenKH, javax.swing.GroupLayout.PREFERRED_SIZE, 272, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                            .addComponent(txtMaDonHang, javax.swing.GroupLayout.DEFAULT_SIZE, 156, Short.MAX_VALUE)
+                            .addComponent(cboStatus, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
                     .addGroup(pnMainLayout.createSequentialGroup()
                         .addGroup(pnMainLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                             .addComponent(btnAddDH, javax.swing.GroupLayout.DEFAULT_SIZE, 189, Short.MAX_VALUE)
@@ -576,20 +645,23 @@ public class DonHang extends javax.swing.JPanel {
                             .addComponent(btnLamMoi, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                             .addComponent(btnRenew, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                             .addComponent(btnXoa, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 594, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(0, 0, Short.MAX_VALUE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(jScrollPane2))
         );
         pnMainLayout.setVerticalGroup(
             pnMainLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(pnMainLayout.createSequentialGroup()
                 .addGroup(pnMainLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel5)
-                    .addComponent(cboTenKH, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 10, Short.MAX_VALUE)
+                    .addComponent(cboTenKH, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(cboStatus, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jLabel6))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 12, Short.MAX_VALUE)
                 .addGroup(pnMainLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(txtNgayDat, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(txtNgay))
+                    .addComponent(txtMaDonHang, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(txtNgay)
+                    .addComponent(jLabel7)
+                    .addComponent(txtNgayDat, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGroup(pnMainLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, pnMainLayout.createSequentialGroup()
                         .addComponent(btnLamMoi)
@@ -615,12 +687,12 @@ public class DonHang extends javax.swing.JPanel {
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel1Layout.createSequentialGroup()
                 .addContainerGap()
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(pnMain, javax.swing.GroupLayout.PREFERRED_SIZE, 1145, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                    .addComponent(pnMain, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                     .addGroup(jPanel1Layout.createSequentialGroup()
                         .addComponent(jScrollPane3, javax.swing.GroupLayout.PREFERRED_SIZE, 547, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 586, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                        .addComponent(tblSanPhamDaChon, javax.swing.GroupLayout.PREFERRED_SIZE, 586, javax.swing.GroupLayout.PREFERRED_SIZE)))
                 .addGap(0, 0, Short.MAX_VALUE))
         );
         jPanel1Layout.setVerticalGroup(
@@ -630,7 +702,7 @@ public class DonHang extends javax.swing.JPanel {
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 433, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(tblSanPhamDaChon, javax.swing.GroupLayout.PREFERRED_SIZE, 433, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addContainerGap())
                     .addComponent(jScrollPane3)))
         );
@@ -639,21 +711,19 @@ public class DonHang extends javax.swing.JPanel {
     }// </editor-fold>//GEN-END:initComponents
 
     private void btnLamMoiActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnLamMoiActionPerformed
-        loadOrders();
+  
     }//GEN-LAST:event_btnLamMoiActionPerformed
 
     private void btnXoaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnXoaActionPerformed
-        removeSelectedProduct();
+
     }//GEN-LAST:event_btnXoaActionPerformed
 
     private void btnRenewActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnRenewActionPerformed
-        loadCustomers();
-        loadOrders();
-        loadProducts();
+
     }//GEN-LAST:event_btnRenewActionPerformed
 
     private void btnDelDHActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnDelDHActionPerformed
-        // TODO add your handling code here:
+
     }//GEN-LAST:event_btnDelDHActionPerformed
 
 
@@ -665,16 +735,20 @@ public class DonHang extends javax.swing.JPanel {
     private javax.swing.JButton btnNewDH;
     private javax.swing.JButton btnRenew;
     private javax.swing.JButton btnXoa;
+    private javax.swing.JComboBox<String> cboStatus;
     private javax.swing.JComboBox<String> cboTenKH;
     private javax.swing.JLabel jLabel5;
+    private javax.swing.JLabel jLabel6;
+    private javax.swing.JLabel jLabel7;
     private javax.swing.JPanel jPanel1;
-    private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.JScrollPane jScrollPane3;
     private javax.swing.JPanel pnMain;
     private javax.swing.JTable tblDanhSachSanPham;
     private javax.swing.JTable tblDonHang;
     private javax.swing.JTable tblLaptop;
+    private javax.swing.JScrollPane tblSanPhamDaChon;
+    private javax.swing.JTextField txtMaDonHang;
     private javax.swing.JLabel txtNgay;
     private javax.swing.JTextField txtNgayDat;
     // End of variables declaration//GEN-END:variables

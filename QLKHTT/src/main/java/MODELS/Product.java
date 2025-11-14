@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 
 public class Product {
+
     private String productId;
     private String brand;
     private String model;
@@ -15,20 +16,20 @@ public class Product {
     private String image;
     private Instant createdAt;
 
-    // Constructors
-    public Product() {}
+    public Product() {
+    }
 
     public Product(
-        String productId,
-        String brand,
-        String model,
-        String cpu,
-        int ram,
-        String storage,
-        BigDecimal price,
-        boolean available,
-        String image,
-        Instant createdAt
+            String productId,
+            String brand,
+            String model,
+            String cpu,
+            int ram,
+            String storage,
+            BigDecimal price,
+            boolean available,
+            String image,
+            Instant createdAt
     ) {
         this.productId = productId;
         this.brand = brand;
@@ -42,50 +43,99 @@ public class Product {
         this.createdAt = createdAt;
     }
 
-    // Getters and Setters
-    public String getProductId() { return productId; }
-    public void setProductId(String productId) { this.productId = productId; }
+    public String getProductId() {
+        return productId;
+    }
 
-    public String getBrand() { return brand; }
-    public void setBrand(String brand) { this.brand = brand; }
+    public void setProductId(String productId) {
+        this.productId = productId;
+    }
 
-    public String getModel() { return model; }
-    public void setModel(String model) { this.model = model; }
+    public String getBrand() {
+        return brand;
+    }
 
-    public String getCpu() { return cpu; }
-    public void setCpu(String cpu) { this.cpu = cpu; }
+    public void setBrand(String brand) {
+        this.brand = brand;
+    }
 
-    public int getRam() { return ram; }
-    public void setRam(int ram) { this.ram = ram; }
+    public String getModel() {
+        return model;
+    }
 
-    public String getStorage() { return storage; }
-    public void setStorage(String storage) { this.storage = storage; }
+    public void setModel(String model) {
+        this.model = model;
+    }
 
-    public BigDecimal getPrice() { return price; }
-    public void setPrice(BigDecimal price) { this.price = price; }
+    public String getCpu() {
+        return cpu;
+    }
 
-    public boolean isAvailable() { return available; }
-    public void setAvailable(boolean available) { this.available = available; }
+    public void setCpu(String cpu) {
+        this.cpu = cpu;
+    }
 
-    public String getImage() { return image; }
-    public void setImage(String image) { this.image = image; }
+    public int getRam() {
+        return ram;
+    }
 
-    public Instant getCreatedAt() { return createdAt; }
-    public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
+    public void setRam(int ram) {
+        this.ram = ram;
+    }
+
+    public String getStorage() {
+        return storage;
+    }
+
+    public void setStorage(String storage) {
+        this.storage = storage;
+    }
+
+    public BigDecimal getPrice() {
+        return price;
+    }
+
+    public void setPrice(BigDecimal price) {
+        this.price = price;
+    }
+
+    public boolean isAvailable() {
+        return available;
+    }
+
+    public void setAvailable(boolean available) {
+        this.available = available;
+    }
+
+    public String getImage() {
+        return image;
+    }
+
+    public void setImage(String image) {
+        this.image = image;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
+    }
 
     @Override
     public String toString() {
-        return "Product{" +
-                "productId='" + productId + '\'' +
-                ", brand='" + brand + '\'' +
-                ", model='" + model + '\'' +
-                ", cpu='" + cpu + '\'' +
-                ", ram=" + ram +
-                ", storage='" + storage + '\'' +
-                ", price=" + price +
-                ", available=" + available +
-                ", image='" + image + '\'' +
-                ", createdAt=" + createdAt +
-                '}';
+        return "Product{"
+                + "productId='" + productId + '\''
+                + ", brand='" + brand + '\''
+                + ", model='" + model + '\''
+                + ", cpu='" + cpu + '\''
+                + ", ram=" + ram
+                + ", storage='" + storage + '\''
+                + ", price=" + price
+                + ", available=" + available
+                + ", image='" + image + '\''
+                + ", createdAt=" + createdAt
+                + '}';
     }
 }

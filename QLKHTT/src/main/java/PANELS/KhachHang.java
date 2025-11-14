@@ -27,40 +27,31 @@ public class KhachHang extends javax.swing.JPanel {
 
     private DefaultTableModel tblModel;
     private CustomerDAO customerDAO;
-    private UUID selectedCustomerId;
+    private String selectedCustomerId;
 
-    /**
-     * Creates new form KhachHang
-     */
     public KhachHang() {
         initComponents();
         init();
     }
 
     private void init() {
-        // ✅ 1. Kết nối và khởi tạo DAO thủ công
         CqlSession session = KetNoICSDL.getSession();
         customerDAO = new CustomerDAO(session);
-
-        // ✅ 2. Chuẩn bị bảng
         tblModel = (DefaultTableModel) tblKH.getModel();
         tblModel.setRowCount(0);
-
-        // ✅ 3. Load dữ liệu ban đầu
         loadDataToTable();
-
-        // ✅ 4. Sự kiện click chọn hàng
         tblKH.getSelectionModel().addListSelectionListener((ListSelectionEvent event) -> {
             if (!event.getValueIsAdjusting() && tblKH.getSelectedRow() != -1) {
                 showDetail();
             }
         });
-
-        // ✅ 5. Action cho nút
         btnAddKH.addActionListener(e -> addCustomer());
         btnEditKH.addActionListener(e -> updateCustomer());
         btnDelKH.addActionListener(e -> deleteCustomer());
         btnNewKH.addActionListener(e -> clearForm());
+
+        // THÊM: Đặt trạng thái ban đầu cho form
+        clearForm();
     }
 
     private void loadDataToTable() {
@@ -69,7 +60,7 @@ public class KhachHang extends javax.swing.JPanel {
             List<Customer> customers = customerDAO.findAll();
             for (Customer c : customers) {
                 tblModel.addRow(new Object[]{
-                    c.getCustomerId(),
+                    c.getCustomerId(), // Này đã là String
                     c.getFullName(),
                     c.getEmail(),
                     c.getPhone(),
@@ -89,7 +80,11 @@ public class KhachHang extends javax.swing.JPanel {
     private void showDetail() {
         int selectedRow = tblKH.getSelectedRow();
         if (selectedRow >= 0) {
-            selectedCustomerId = (UUID) tblModel.getValueAt(selectedRow, 0);
+            selectedCustomerId = (String) tblModel.getValueAt(selectedRow, 0);
+
+            txtMaKH.setText(selectedCustomerId);
+            txtMaKH.setEnabled(false);
+
             txtHoTen.setText(tblModel.getValueAt(selectedRow, 1).toString());
             txtEmail.setText(valueOrEmpty(tblModel.getValueAt(selectedRow, 2)));
             txtSDT.setText(valueOrEmpty(tblModel.getValueAt(selectedRow, 3)));
@@ -108,6 +103,9 @@ public class KhachHang extends javax.swing.JPanel {
 
     private void clearForm() {
         selectedCustomerId = null;
+        txtMaKH.setText("");
+        txtMaKH.setEnabled(true);
+
         txtHoTen.setText("");
         txtEmail.setText("");
         txtSDT.setText("");
@@ -116,7 +114,7 @@ public class KhachHang extends javax.swing.JPanel {
         cboGioiTinh.setSelectedIndex(0);
         jCheckBox1.setSelected(true);
         tblKH.clearSelection();
-        txtHoTen.requestFocus();
+        txtMaKH.requestFocus();
     }
 
     private Customer getModelFromForm() {
@@ -130,22 +128,22 @@ public class KhachHang extends javax.swing.JPanel {
             JOptionPane.showMessageDialog(this, "Họ tên và SĐT không được trống!", "Cảnh báo", JOptionPane.WARNING_MESSAGE);
             return null;
         }
-
-        LocalDate dob;
-        try {
-            dob = LocalDate.parse(dobString, DateTimeFormatter.ISO_LOCAL_DATE);
-        } catch (DateTimeParseException e) {
-            JOptionPane.showMessageDialog(this, "Ngày sinh sai định dạng (YYYY-MM-DD).", "Lỗi", JOptionPane.ERROR_MESSAGE);
-            return null;
+        LocalDate dob = null;
+        if (dobString != null && !dobString.isEmpty()) {
+            try {
+                dob = LocalDate.parse(dobString, DateTimeFormatter.ISO_LOCAL_DATE);
+            } catch (DateTimeParseException e) {
+                JOptionPane.showMessageDialog(this, "Ngày sinh sai định dạng (YYYY-MM-DD).", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                return null;
+            }
         }
-
         Customer c = new Customer();
         c.setFullName(fullName);
-        c.setEmail(email);
+        c.setEmail(email.isEmpty() ? null : email);
         c.setPhone(phone);
         c.setDob(dob);
         c.setGender(cboGioiTinh.getSelectedItem().toString());
-        c.setAddress(address);
+        c.setAddress(address.isEmpty() ? null : address);
         c.setStatus(jCheckBox1.isSelected() ? "Active" : "Inactive");
         return c;
     }
@@ -155,12 +153,20 @@ public class KhachHang extends javax.swing.JPanel {
         if (c == null) {
             return;
         }
-
+        String customerId = txtMaKH.getText().trim();
+        if (customerId.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Mã Khách Hàng không được trống!", "Cảnh báo", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        if (customerDAO.findById(customerId) != null) {
+            JOptionPane.showMessageDialog(this, "Mã Khách Hàng này đã tồn tại!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
         try {
-            c.setCustomerId(UUID.randomUUID());
+            c.setCustomerId(customerId);
             c.setCreatedAt(Instant.now());
             customerDAO.save(c);
-            JOptionPane.showMessageDialog(this, "✅ Thêm khách hàng thành công!");
+            JOptionPane.showMessageDialog(this, "Thêm khách hàng thành công!");
             loadDataToTable();
             clearForm();
         } catch (Exception e) {
@@ -173,18 +179,16 @@ public class KhachHang extends javax.swing.JPanel {
             JOptionPane.showMessageDialog(this, "Vui lòng chọn khách hàng cần cập nhật!");
             return;
         }
-
         Customer c = getModelFromForm();
         if (c == null) {
             return;
         }
-
         try {
             c.setCustomerId(selectedCustomerId);
             Customer old = customerDAO.findById(selectedCustomerId);
             c.setCreatedAt(old != null ? old.getCreatedAt() : Instant.now());
             customerDAO.save(c);
-            JOptionPane.showMessageDialog(this, "✅ Cập nhật thành công!");
+            JOptionPane.showMessageDialog(this, "Cập nhật thành công!");
             loadDataToTable();
             clearForm();
         } catch (Exception e) {
@@ -204,8 +208,9 @@ public class KhachHang extends javax.swing.JPanel {
         }
 
         try {
+            // THAY ĐỔI: Truyền ID kiểu String
             customerDAO.delete(selectedCustomerId);
-            JOptionPane.showMessageDialog(this, "✅ Xóa thành công!");
+            JOptionPane.showMessageDialog(this, "Xóa thành công!");
             loadDataToTable();
             clearForm();
         } catch (Exception e) {
@@ -243,6 +248,8 @@ public class KhachHang extends javax.swing.JPanel {
         jLabel7 = new javax.swing.JLabel();
         txtNgaySinh = new javax.swing.JTextField();
         btnRenew = new javax.swing.JButton();
+        jLabel8 = new javax.swing.JLabel();
+        txtMaKH = new javax.swing.JTextField();
         jScrollPane1 = new javax.swing.JScrollPane();
         tblKH = new javax.swing.JTable();
 
@@ -324,13 +331,15 @@ public class KhachHang extends javax.swing.JPanel {
             }
         });
 
+        jLabel8.setText("Mã Khách Hàng");
+
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
         jPanel1Layout.setHorizontalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel1Layout.createSequentialGroup()
                 .addGap(0, 0, 0)
-                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                     .addGroup(jPanel1Layout.createSequentialGroup()
                         .addComponent(btnDelKH, javax.swing.GroupLayout.PREFERRED_SIZE, 161, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
@@ -366,7 +375,11 @@ public class KhachHang extends javax.swing.JPanel {
                                     .addGroup(jPanel1Layout.createSequentialGroup()
                                         .addComponent(jLabel4)
                                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                        .addComponent(cboGioiTinh, javax.swing.GroupLayout.PREFERRED_SIZE, 109, javax.swing.GroupLayout.PREFERRED_SIZE))))
+                                        .addComponent(cboGioiTinh, javax.swing.GroupLayout.PREFERRED_SIZE, 109, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                                .addGap(18, 18, 18)
+                                .addComponent(jLabel8)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                .addComponent(txtMaKH))
                             .addGroup(jPanel1Layout.createSequentialGroup()
                                 .addComponent(txtNgaySinh, javax.swing.GroupLayout.PREFERRED_SIZE, 164, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addGap(50, 50, 50)
@@ -388,7 +401,9 @@ public class KhachHang extends javax.swing.JPanel {
                     .addComponent(txtHoTen, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jLabel1)
                     .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(txtEmail, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(txtEmail, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(jLabel8)
+                    .addComponent(txtMaKH, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(jPanel1Layout.createSequentialGroup()
                         .addGap(12, 12, 12)
@@ -441,7 +456,7 @@ public class KhachHang extends javax.swing.JPanel {
                 {null, null, null, null, null, null, null, null, null}
             },
             new String [] {
-                "Mã KH", "Họ và Tên", "Email", "SDT", "DOB", "Gioi tinh", "Địa chỉ", "Created", "TrạngThái"
+                "Mã KH", "Họ và Tên", "Email", "SDT", "Ngày Sinh", "Giới Tính", "Địa chỉ", "Ngày Tạo", "Trạng Thái"
             }
         ));
         jScrollPane1.setViewportView(tblKH);
@@ -483,6 +498,7 @@ public class KhachHang extends javax.swing.JPanel {
     private javax.swing.JLabel jLabel5;
     private javax.swing.JLabel jLabel6;
     private javax.swing.JLabel jLabel7;
+    private javax.swing.JLabel jLabel8;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JSplitPane jSplitPane1;
@@ -490,6 +506,7 @@ public class KhachHang extends javax.swing.JPanel {
     private javax.swing.JTextField txtDiaChi;
     private javax.swing.JTextField txtEmail;
     private javax.swing.JTextField txtHoTen;
+    private javax.swing.JTextField txtMaKH;
     private javax.swing.JTextField txtNgaySinh;
     private javax.swing.JTextField txtSDT;
     // End of variables declaration//GEN-END:variables

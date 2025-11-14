@@ -9,16 +9,16 @@ import com.datastax.oss.driver.api.core.type.UserDefinedType;
 import java.util.*;
 
 public class OrderByIdDAO {
+
     private final CqlSession session;
 
     public OrderByIdDAO(CqlSession session) {
         this.session = session;
     }
 
-    // ✅ 1. Lưu Order
     public void save(OrderById order) {
         String query = "INSERT INTO orders_by_id (order_id, customer_id, order_date, total, items, status) "
-                     + "VALUES (?, ?, ?, ?, ?, ?)";
+                + "VALUES (?, ?, ?, ?, ?, ?)";
         PreparedStatement ps = session.prepare(query);
 
         List<UdtValue> itemValues = new ArrayList<>();
@@ -46,12 +46,13 @@ public class OrderByIdDAO {
         ));
     }
 
-    // ✅ 2. Lấy Order theo ID
-    public OrderById findById(UUID orderId) {
+    public OrderById findById(String orderId) {
         String query = "SELECT * FROM orders_by_id WHERE order_id = ?";
         PreparedStatement ps = session.prepare(query);
         Row row = session.execute(ps.bind(orderId)).one();
-        if (row == null) return null;
+        if (row == null) {
+            return null;
+        }
 
         List<OrderItem> items = new ArrayList<>();
         List<UdtValue> udtItems = row.getList("items", UdtValue.class);
@@ -68,8 +69,9 @@ public class OrderByIdDAO {
         }
 
         return new OrderById(
-                row.getUuid("order_id"),
-                row.getUuid("customer_id"),
+                // THAY ĐỔI: getUuid -> getString
+                row.getString("order_id"),
+                row.getString("customer_id"),
                 row.getInstant("order_date"),
                 row.getBigDecimal("total"),
                 items,
@@ -77,7 +79,6 @@ public class OrderByIdDAO {
         );
     }
 
-    // ✅ 3. Cập nhật Order
     public void update(OrderById order) {
         String query = "UPDATE orders_by_id SET customer_id=?, order_date=?, total=?, items=?, status=? WHERE order_id=?";
         PreparedStatement ps = session.prepare(query);
@@ -107,14 +108,12 @@ public class OrderByIdDAO {
         ));
     }
 
-    // ✅ 4. Xóa Order
-    public void delete(UUID orderId) {
+    public void delete(String orderId) {
         String query = "DELETE FROM orders_by_id WHERE order_id = ?";
         PreparedStatement ps = session.prepare(query);
         session.execute(ps.bind(orderId));
     }
 
-    // ✅ 5. Lấy tất cả Order theo status (tuỳ chọn)
     public List<OrderById> findByStatus(String status) {
         String query = "SELECT * FROM orders_by_id WHERE status = ?";
         PreparedStatement ps = session.prepare(query);
@@ -136,8 +135,8 @@ public class OrderByIdDAO {
             }
 
             result.add(new OrderById(
-                    row.getUuid("order_id"),
-                    row.getUuid("customer_id"),
+                    row.getString("order_id"),
+                    row.getString("customer_id"),
                     row.getInstant("order_date"),
                     row.getBigDecimal("total"),
                     items,

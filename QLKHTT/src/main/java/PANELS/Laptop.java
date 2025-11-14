@@ -10,7 +10,6 @@ import MODELS.Product;
 import com.datastax.oss.driver.api.core.CqlSession;
 import java.awt.Image;
 import java.io.File;
-import java.util.UUID;
 import java.math.BigDecimal;
 import java.time.Instant;
 import javax.swing.ImageIcon;
@@ -33,16 +32,14 @@ public class Laptop extends javax.swing.JPanel {
     private DefaultTableModel tblModel;
     private ProductDAO productDAO;
     private String personalImage;
+    private String selectedProductId;
 
-    /**
-     * Creates new form Laptop
-     */
     public Laptop() {
         initComponents();
         init();
     }
 
-     private void init() {
+    private void init() {
         tblModel = (DefaultTableModel) tblLaptop.getModel();
         tblModel.setColumnIdentifiers(new String[]{
             "ID", "Hãng", "Model", "CPU", "RAM (GB)", "Bộ nhớ", "Giá", "Còn hàng", "Hình ảnh", "Ngày tạo"
@@ -68,6 +65,9 @@ public class Laptop extends javax.swing.JPanel {
         btnDelLP.addActionListener(e -> deleteProduct());
         btnNewLP.addActionListener(e -> clearForm());
         btnImage.addActionListener(e -> chooseImage());
+
+        // THAY ĐỔI: Đặt form về trạng thái clear ban đầu
+        clearForm();
     }
 
     private void loadProductsToTable() {
@@ -96,8 +96,17 @@ public class Laptop extends javax.swing.JPanel {
     private void showDetail() {
         int selectedRow = tblLaptop.getSelectedRow();
         if (selectedRow >= 0) {
+            // THAY ĐỔI: Lấy ID kiểu String
+            selectedProductId = tblModel.getValueAt(selectedRow, 0).toString();
+
+            // THAY ĐỔI: Hiển thị ID và Model vào đúng ô, vô hiệu hóa ô ID
+            txtMaSP.setText(selectedProductId); // Cột 0 là ID
+            txtMaSP.setEnabled(false);
+
             txtHang.setText(tblModel.getValueAt(selectedRow, 1).toString());
-            txtModel.setText(tblModel.getValueAt(selectedRow, 2).toString());
+
+            txtModel.setText(tblModel.getValueAt(selectedRow, 2).toString()); // Cột 2 là Model
+
             txtCpu.setText(tblModel.getValueAt(selectedRow, 3).toString());
             txtRam.setText(tblModel.getValueAt(selectedRow, 4).toString());
             txtBoNho.setText(tblModel.getValueAt(selectedRow, 5).toString());
@@ -135,7 +144,9 @@ public class Laptop extends javax.swing.JPanel {
 
     private Product getProductFromForm() {
         try {
+            // THAY ĐỔI: Hàm này chỉ lấy thông tin, không lấy ID
             String brand = txtHang.getText().trim();
+            // THAY ĐỔI: Lấy Model từ txtModel
             String model = txtModel.getText().trim();
             String cpu = txtCpu.getText().trim();
             int ram = Integer.parseInt(txtRam.getText().trim());
@@ -143,8 +154,9 @@ public class Laptop extends javax.swing.JPanel {
             BigDecimal price = new BigDecimal(txtGia.getText().trim());
             boolean available = chkConHang.isSelected();
 
+            // THAY ĐỔI: Cập nhật kiểm tra
             if (brand.isEmpty() || model.isEmpty() || cpu.isEmpty() || storage.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Vui lòng nhập đầy đủ thông tin.", "Cảnh báo", JOptionPane.WARNING_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Vui lòng nhập đầy đủ thông tin (Hãng, Model, CPU, Bộ nhớ).", "Cảnh báo", JOptionPane.WARNING_MESSAGE);
                 return null;
             }
 
@@ -159,16 +171,30 @@ public class Laptop extends javax.swing.JPanel {
             p.setImage(personalImage);
             return p;
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Lỗi định dạng: " + e.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Lỗi định dạng (RAM phải là số, Giá phải là số): " + e.getMessage(), "Lỗi", JOptionPane.ERROR_MESSAGE);
             return null;
         }
     }
 
     private void addProduct() {
         Product product = getProductFromForm();
-        if (product == null) return;
+        if (product == null) {
+            return;
+        }
+        String productId = txtMaSP.getText().trim();
+        if (productId.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Mã SP không được để trống!", "Cảnh báo", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
 
-        product.setProductId(UUID.randomUUID().toString());
+        // Kiểm tra ID có bị trùng không
+        if (productDAO.findProductById(productId) != null) {
+            JOptionPane.showMessageDialog(this, "Mã SP này đã tồn tại!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // Gán ID và ngày tạo
+        product.setProductId(productId);
         product.setCreatedAt(Instant.now());
 
         try {
@@ -182,19 +208,26 @@ public class Laptop extends javax.swing.JPanel {
     }
 
     private void updateProduct() {
-        int selectedRow = tblLaptop.getSelectedRow();
-        if (selectedRow < 0) {
-            JOptionPane.showMessageDialog(this, "Chọn sản phẩm để cập nhật.");
+        // THAY ĐỔI: Kiểm tra bằng selectedProductId
+        if (selectedProductId == null) {
+            JOptionPane.showMessageDialog(this, "Vui lòng chọn sản phẩm để cập nhật.");
             return;
         }
 
         Product product = getProductFromForm();
-        if (product == null) return;
+        if (product == null) {
+            return;
+        }
 
-        String productId = tblModel.getValueAt(selectedRow, 0).toString();
-        Instant createdAt = (Instant) tblModel.getValueAt(selectedRow, 9);
-        product.setProductId(productId);
-        product.setCreatedAt(createdAt);
+        // THAY ĐỔI: Lấy ID và CreatedAt từ bản ghi cũ
+        Product oldProduct = productDAO.findProductById(selectedProductId);
+        if (oldProduct == null) {
+            JOptionPane.showMessageDialog(this, "Sản phẩm không còn tồn tại.", "Lỗi", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        product.setProductId(selectedProductId); // Gán ID đã chọn
+        product.setCreatedAt(oldProduct.getCreatedAt()); // Giữ ngày tạo cũ
 
         try {
             productDAO.updateProduct(product);
@@ -207,18 +240,19 @@ public class Laptop extends javax.swing.JPanel {
     }
 
     private void deleteProduct() {
-        int selectedRow = tblLaptop.getSelectedRow();
-        if (selectedRow < 0) {
-            JOptionPane.showMessageDialog(this, "Chọn sản phẩm để xóa.");
+        // THAY ĐỔI: Kiểm tra bằng selectedProductId
+        if (selectedProductId == null) {
+            JOptionPane.showMessageDialog(this, "Vui lòng chọn sản phẩm để xóa.");
             return;
         }
 
-        String productId = tblModel.getValueAt(selectedRow, 0).toString();
         int confirm = JOptionPane.showConfirmDialog(this, "Xóa sản phẩm này?", "Xác nhận", JOptionPane.YES_NO_OPTION);
-        if (confirm != JOptionPane.YES_OPTION) return;
+        if (confirm != JOptionPane.YES_OPTION) {
+            return;
+        }
 
         try {
-            productDAO.deleteProductById(productId);
+            productDAO.deleteProductById(selectedProductId);
             JOptionPane.showMessageDialog(this, "Đã xóa sản phẩm!");
             loadProductsToTable();
             clearForm();
@@ -228,6 +262,8 @@ public class Laptop extends javax.swing.JPanel {
     }
 
     private void clearForm() {
+        txtMaSP.setText("");
+        txtMaSP.setEnabled(true);
         txtHang.setText("");
         txtModel.setText("");
         txtCpu.setText("");
@@ -238,7 +274,9 @@ public class Laptop extends javax.swing.JPanel {
         lbHinh.setIcon(null);
         lbHinh.setText("Không có hình");
         personalImage = null;
+        selectedProductId = null;
         tblLaptop.clearSelection();
+        txtMaSP.requestFocus();
     }
 
     private void chooseImage() {
@@ -247,7 +285,9 @@ public class Laptop extends javax.swing.JPanel {
         if (fc.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
             File src = fc.getSelectedFile();
             File destDir = new File("src/main/resources/IMAGES");
-            if (!destDir.exists()) destDir.mkdirs();
+            if (!destDir.exists()) {
+                destDir.mkdirs();
+            }
             Path destPath = destDir.toPath().resolve(src.getName());
             try {
                 Files.copy(src.toPath(), destPath, StandardCopyOption.REPLACE_EXISTING);
@@ -271,7 +311,7 @@ public class Laptop extends javax.swing.JPanel {
         jSplitPane1 = new javax.swing.JSplitPane();
         jPanel1 = new javax.swing.JPanel();
         jLabel1 = new javax.swing.JLabel();
-        txtModel = new javax.swing.JTextField();
+        txtMaSP = new javax.swing.JTextField();
         jLabel2 = new javax.swing.JLabel();
         txtHang = new javax.swing.JTextField();
         jLabel3 = new javax.swing.JLabel();
@@ -291,6 +331,8 @@ public class Laptop extends javax.swing.JPanel {
         jPanel2 = new javax.swing.JPanel();
         btnImage = new javax.swing.JButton();
         lbHinh = new javax.swing.JLabel();
+        jLabel8 = new javax.swing.JLabel();
+        txtModel = new javax.swing.JTextField();
         jScrollPane1 = new javax.swing.JScrollPane();
         tblLaptop = new javax.swing.JTable();
 
@@ -300,9 +342,9 @@ public class Laptop extends javax.swing.JPanel {
         jSplitPane1.setOrientation(javax.swing.JSplitPane.VERTICAL_SPLIT);
 
         jLabel1.setHorizontalAlignment(javax.swing.SwingConstants.RIGHT);
-        jLabel1.setText("Model");
+        jLabel1.setText("Mã SP");
 
-        txtModel.setPreferredSize(new java.awt.Dimension(100, 22));
+        txtMaSP.setPreferredSize(new java.awt.Dimension(100, 22));
 
         jLabel2.setHorizontalAlignment(javax.swing.SwingConstants.RIGHT);
         jLabel2.setText("Hãng");
@@ -386,6 +428,11 @@ public class Laptop extends javax.swing.JPanel {
                     .addContainerGap()))
         );
 
+        jLabel8.setHorizontalAlignment(javax.swing.SwingConstants.RIGHT);
+        jLabel8.setText("Model");
+
+        txtModel.setPreferredSize(new java.awt.Dimension(100, 22));
+
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
         jPanel1Layout.setHorizontalGroup(
@@ -403,21 +450,28 @@ public class Laptop extends javax.swing.JPanel {
                         .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addGroup(jPanel1Layout.createSequentialGroup()
                                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                    .addComponent(txtHang, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                    .addComponent(chkConHang, javax.swing.GroupLayout.PREFERRED_SIZE, 187, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                    .addComponent(txtModel, javax.swing.GroupLayout.PREFERRED_SIZE, 160, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                                    .addComponent(jLabel4)
-                                    .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                    .addGroup(javax.swing.GroupLayout.Alignment.LEADING, jPanel1Layout.createSequentialGroup()
-                                        .addGap(25, 25, 25)
-                                        .addComponent(jLabel6))))
-                            .addComponent(txtGia, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
-                            .addComponent(txtRam, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, 122, Short.MAX_VALUE)
-                            .addComponent(txtCpu, javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(txtBoNho)))
+                                    .addGroup(jPanel1Layout.createSequentialGroup()
+                                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                            .addComponent(txtHang, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                            .addComponent(txtMaSP, javax.swing.GroupLayout.PREFERRED_SIZE, 160, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                                            .addComponent(jLabel4)
+                                            .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                            .addGroup(javax.swing.GroupLayout.Alignment.LEADING, jPanel1Layout.createSequentialGroup()
+                                                .addGap(25, 25, 25)
+                                                .addComponent(jLabel6))))
+                                    .addComponent(txtGia, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                    .addComponent(txtRam, javax.swing.GroupLayout.PREFERRED_SIZE, 122, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                    .addComponent(txtBoNho, javax.swing.GroupLayout.PREFERRED_SIZE, 122, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                    .addComponent(txtCpu, javax.swing.GroupLayout.PREFERRED_SIZE, 122, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                            .addGroup(jPanel1Layout.createSequentialGroup()
+                                .addComponent(chkConHang, javax.swing.GroupLayout.PREFERRED_SIZE, 187, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(jLabel8, javax.swing.GroupLayout.PREFERRED_SIZE, 57, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(txtModel, javax.swing.GroupLayout.PREFERRED_SIZE, 122, javax.swing.GroupLayout.PREFERRED_SIZE))))
                     .addGroup(jPanel1Layout.createSequentialGroup()
                         .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                             .addComponent(btnNewLP, javax.swing.GroupLayout.DEFAULT_SIZE, 205, Short.MAX_VALUE)
@@ -426,12 +480,12 @@ public class Laptop extends javax.swing.JPanel {
                         .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
                             .addComponent(btnEditLP, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                             .addComponent(btnAddLP, javax.swing.GroupLayout.DEFAULT_SIZE, 205, Short.MAX_VALUE))))
-                .addGap(18, 18, 18)
+                .addGap(0, 0, 0)
                 .addComponent(jPanel2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(0, 13, Short.MAX_VALUE))
+                .addGap(0, 0, Short.MAX_VALUE))
         );
 
-        jPanel1Layout.linkSize(javax.swing.SwingConstants.HORIZONTAL, new java.awt.Component[] {chkConHang, txtGia, txtHang, txtModel});
+        jPanel1Layout.linkSize(javax.swing.SwingConstants.HORIZONTAL, new java.awt.Component[] {chkConHang, txtGia, txtHang, txtMaSP});
 
         jPanel1Layout.linkSize(javax.swing.SwingConstants.HORIZONTAL, new java.awt.Component[] {jLabel2, jLabel5, jLabel7});
 
@@ -442,32 +496,30 @@ public class Laptop extends javax.swing.JPanel {
                     .addGroup(jPanel1Layout.createSequentialGroup()
                         .addGap(28, 28, 28)
                         .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                            .addComponent(txtModel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(txtMaSP, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                             .addComponent(jLabel1)
                             .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                             .addComponent(txtCpu, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addGroup(jPanel1Layout.createSequentialGroup()
-                                .addGap(12, 12, 12)
-                                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                                    .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                    .addComponent(txtHang, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                    .addComponent(jLabel4)))
-                            .addGroup(jPanel1Layout.createSequentialGroup()
-                                .addGap(9, 9, 9)
-                                .addComponent(txtRam, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                        .addGap(12, 12, 12)
+                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                            .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(txtHang, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(jLabel4)
+                            .addComponent(txtRam, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                         .addGap(12, 12, 12)
                         .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addComponent(jLabel5)
                             .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                                 .addComponent(jLabel6)
-                                .addComponent(txtGia, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                            .addComponent(txtBoNho, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                        .addGap(12, 12, 12)
+                                .addComponent(txtGia, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addComponent(txtBoNho, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                        .addGap(11, 11, 11)
                         .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                             .addComponent(jLabel7)
-                            .addComponent(chkConHang))
-                        .addGap(23, 23, 23)
+                            .addComponent(chkConHang)
+                            .addComponent(txtModel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(jLabel8))
+                        .addGap(22, 22, 22)
                         .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                             .addComponent(btnNewLP, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                             .addComponent(btnAddLP, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
@@ -491,7 +543,7 @@ public class Laptop extends javax.swing.JPanel {
                 {null, null, null, null, null, null, null, null, null, null}
             },
             new String [] {
-                "ID Laptop", "Hãng", "Model", "CPU", "RAM", "Bộ nhớ", "Giá", "Created", "TrạngThái", "Hình"
+                "ID Laptop", "Hãng", "Model", "CPU", "RAM", "Bộ nhớ", "Giá", "Created", "Trạng Thái", "Hình"
             }
         ));
         jScrollPane1.setViewportView(tblLaptop);
@@ -524,6 +576,7 @@ public class Laptop extends javax.swing.JPanel {
     private javax.swing.JLabel jLabel5;
     private javax.swing.JLabel jLabel6;
     private javax.swing.JLabel jLabel7;
+    private javax.swing.JLabel jLabel8;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;
     private javax.swing.JScrollPane jScrollPane1;
@@ -534,6 +587,7 @@ public class Laptop extends javax.swing.JPanel {
     private javax.swing.JTextField txtCpu;
     private javax.swing.JTextField txtGia;
     private javax.swing.JTextField txtHang;
+    private javax.swing.JTextField txtMaSP;
     private javax.swing.JTextField txtModel;
     private javax.swing.JTextField txtRam;
     // End of variables declaration//GEN-END:variables

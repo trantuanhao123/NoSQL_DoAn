@@ -3,21 +3,23 @@ package MODELS;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
-import java.util.UUID;
 
 public class OrderByCustomer {
-    private UUID customerId;
+
+    private String customerId;
     private String yearMonth;
     private Instant orderDate;
-    private UUID orderId;
+
+    private String orderId;
+
     private BigDecimal total;
     private List<OrderItem> items;
     private String status;
 
-    // Constructors
-    public OrderByCustomer() {}
+    public OrderByCustomer() {
+    }
 
-    public OrderByCustomer(UUID customerId, String yearMonth, Instant orderDate, UUID orderId, BigDecimal total, List<OrderItem> items, String status) {
+    public OrderByCustomer(String customerId, String yearMonth, Instant orderDate, String orderId, BigDecimal total, List<OrderItem> items, String status) {
         this.customerId = customerId;
         this.yearMonth = yearMonth;
         this.orderDate = orderDate;
@@ -27,12 +29,11 @@ public class OrderByCustomer {
         this.status = status;
     }
 
-    // Getters and Setters
-    public UUID getCustomerId() {
+    public String getCustomerId() {
         return customerId;
     }
 
-    public void setCustomerId(UUID customerId) {
+    public void setCustomerId(String customerId) {
         this.customerId = customerId;
     }
 
@@ -52,11 +53,11 @@ public class OrderByCustomer {
         this.orderDate = orderDate;
     }
 
-    public UUID getOrderId() {
+    public String getOrderId() {
         return orderId;
     }
 
-    public void setOrderId(UUID orderId) {
+    public void setOrderId(String orderId) {
         this.orderId = orderId;
     }
 

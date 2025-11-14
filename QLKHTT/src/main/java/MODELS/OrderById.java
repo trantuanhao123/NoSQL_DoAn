@@ -3,27 +3,22 @@ package MODELS;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
-import java.util.UUID;
 import java.io.Serializable;
 
-/**
- * Lớp OrderById mô tả đơn hàng được truy cập theo order_id.
- * Không sử dụng annotation Cassandra mapper.
- */
 public class OrderById implements Serializable {
 
-    private UUID orderId;
-    private UUID customerId;
+    private String orderId;
+    private String customerId;
+
     private Instant orderDate;
     private BigDecimal total;
     private List<OrderItem> items;
     private String status;
 
-    // ✅ Constructor mặc định (Cassandra driver cần khi deserialize)
-    public OrderById() {}
+    public OrderById() {
+    }
 
-    // ✅ Constructor đầy đủ
-    public OrderById(UUID orderId, UUID customerId, Instant orderDate, BigDecimal total, List<OrderItem> items, String status) {
+    public OrderById(String orderId, String customerId, Instant orderDate, BigDecimal total, List<OrderItem> items, String status) {
         this.orderId = orderId;
         this.customerId = customerId;
         this.orderDate = orderDate;
@@ -32,20 +27,19 @@ public class OrderById implements Serializable {
         this.status = status;
     }
 
-    // ✅ Getters / Setters
-    public UUID getOrderId() {
+    public String getOrderId() {
         return orderId;
     }
 
-    public void setOrderId(UUID orderId) {
+    public void setOrderId(String orderId) {
         this.orderId = orderId;
     }
 
-    public UUID getCustomerId() {
+    public String getCustomerId() {
         return customerId;
     }
 
-    public void setCustomerId(UUID customerId) {
+    public void setCustomerId(String customerId) {
         this.customerId = customerId;
     }
 
@@ -81,16 +75,15 @@ public class OrderById implements Serializable {
         this.status = status;
     }
 
-    // ✅ toString() để debug/log
     @Override
     public String toString() {
-        return "OrderById{" +
-                "orderId=" + orderId +
-                ", customerId=" + customerId +
-                ", orderDate=" + orderDate +
-                ", total=" + total +
-                ", items=" + items +
-                ", status='" + status + '\'' +
-                '}';
+        return "OrderById{"
+                + "orderId=" + orderId
+                + ", customerId=" + customerId
+                + ", orderDate=" + orderDate
+                + ", total=" + total
+                + ", items=" + items
+                + ", status='" + status + '\''
+                + '}';
     }
 }

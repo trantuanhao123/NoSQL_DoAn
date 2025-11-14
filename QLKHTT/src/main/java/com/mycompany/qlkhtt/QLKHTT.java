@@ -7,10 +7,7 @@ package com.mycompany.qlkhtt;
 import GUI.frm_Main;
 import javax.swing.JFrame;
 
-/**
- *
- * @author HAO
- */
+
 public class QLKHTT {
     public static void main(String[] args) {
         frm_Main abc = new frm_Main();
